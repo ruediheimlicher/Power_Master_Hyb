@@ -15,6 +15,14 @@ Verdrahtung:	MISO(Master) --> MISO(Slave)
 #include "spi_master.h"
 unsigned char status = 0;
 volatile unsigned char count;
+
+
+volatile uint8_t			spistatus=0;
+
+#define TEENSY_SEND  7
+#define TEENSY_RECV  6
+
+
 uint16_t spiwaitcounter = WHILEMAX; // 5 ms
 
 extern volatile uint8_t arraypos;
@@ -62,48 +70,80 @@ void spi_master_init (void)
 	//SPCR = (1<<SPE) | (1<<MSTR) | (1<<SPR0);	//Aktivierung des SPI, Master, Taktrate fck/16
 	
    SPI_DDR |= (1<<SPI_CS); // Chip select
-   SPI_PORT &= ~(1<<SPI_CS); // LO, invertiert im Optokoppler HI
+   //SPI_PORT &= ~(1<<SPI_CS); // LO, invertiert im Optokoppler HI
+   SPI_PORT |= (1<<SPI_CS); // HI, ohne Optokoppler
    
-   SPCR |= (1<<MSTR);// Set as Master
+   SPCR0 |= (1<<MSTR0);// Set as Master
    
-   SPCR |= (1<<SPR0);               // div 16 SPI2X: div 8
-   //SPCR |= (1<<SPR1);               // div 64 SPI2X: div 32
+   SPI_PORT &= ~(1<<SPI_MISO); // LO
+   
+   SPCR0 |= (1<<SPR00);               // div 16 SPI2X: div 8
+   //SPCR0 |= (1<<SPR10);               // div 64 SPI2X: div 32
    //SPCR |= (1<<SPR1) | (1<<SPR0);   // div 128 SPI2X: div 64
-   //SPCR |= (1<<SPI2X);
-   SPCR |= (1<<SPE); // Enable SPI
-   status = SPSR;								//Status loeschen
+   //SPCR0 |= (1<<SPI2X0);
+   
+   SPCR0 |= (1<<SPE0); // Enable SPI
+   status = SPSR0;								//Status loeschen
+   SPI_DDR |= (1<<(SPI_CS_ADC_PIN));
+}
+
+void spi_master_restore(void)
+{
+   //SPCR0=0;
+   SPCR0 &= ~(1<<CPOL0);
+   SPCR0 &= ~(1<<CPHA0);
+
 }
 
 void setSPI_Teensy(void)
 {
    uint8_t outindex=0;
-   SPI_PORT |=  (1<<SPI_CS); // CS LO, Start, Slave soll erstes Byte laden
+   SPI_PORT &=  ~(1<<SPI_CS); // CS LO, Start, Slave soll erstes Byte laden
    _delay_us(1);
    
    
-   SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
-   _delay_us(1);
+   //SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
+   //_delay_us(1);
    
    //PORTB &= ~(1<<0);
    for (outindex=0;outindex < SPI_BUFFERSIZE;outindex++)
       //for (outindex=0;outindex < 4;outindex++)
    {
       //OSZI_A_LO;
-      //SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
-      _delay_us(1);
+      // _delay_us(1);
+      SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
+      //_delay_us(1);
       
-      SPDR = spi_txbuffer[outindex];
+      SPDR0 = spi_txbuffer[outindex];
       
-      while(!(SPSR & (1<<SPIF)) && spiwaitcounter < WHILEMAX)
+      while(!(SPSR0 & (1<<SPIF0)) && spiwaitcounter < WHILEMAX)
       {
-         // spiwaitcounter++;
+          spiwaitcounter++;
+      }
+      spiwaitcounter=0;
+      //_delay_us(1);
+      //uint8_t incoming = SPDR0;
+      if (spistatus & (1<< TEENSY_SEND))
+      {
+         spi_rxbuffer[outindex] = SPDR0;
+         _delay_us(3);
+         //spi_rxbuffer[outindex] = incoming;
+      }
+      else if (outindex == 0) // slave warten lassen, um code zu laden
+      {
+         _delay_us(3);
+      }
+      else if (outindex ==1) // code lesen, spistatus steuern
+      {
+         spi_rxbuffer[0] = SPDR0;
       }
       
-      spi_rxbuffer[outindex] = SPDR;
-      spiwaitcounter=0;
-      _delay_us(1);
-      //SPI_PORT |= (1<<SPI_SS); // SS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
+      
+      //_delay_us(3);
+      SPI_PORT |= (1<<SPI_SS); // SS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
       //OSZI_A_HI;
+      
+      
    }
    //PORTB |=(1<<0);
    arraypos++;
@@ -115,10 +155,10 @@ void setSPI_Teensy(void)
    // wichtig
    _delay_us(5);
    
-   SPI_PORT |= (1<<SPI_SS); // SS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
-   _delay_us(5);
+   //SPI_PORT |= (1<<SPI_SS); // SS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
+   //_delay_us(1);
    
-   SPI_PORT &= ~(1<<SPI_CS); // CS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
+   SPI_PORT |= (1<<SPI_CS); // CS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
    //OSZI_A_HI;
 
 }
@@ -126,16 +166,16 @@ void setSPI_Teensy(void)
 unsigned char SPI_get_put_char(uint8_t cData)
 {
    /* Start transmission */
-   SPDR = cData;
+   SPDR0 = cData;
    /* Wait for transmission complete */
   // while(!(SPSR & (1<<SPIF)))
-      while(!(SPSR & (1<<SPIF)) && spiwaitcounter < WHILEMAX)
+      while(!(SPSR0 & (1<<SPIF0)) && spiwaitcounter < WHILEMAX)
       {
-         //spiwaitcounter++;
+         spiwaitcounter++;
       }
       ;
    /* Return data register */
-   return SPDR;
+   return SPDR0;
 }
 /*
 void master_transmit (unsigned char data)

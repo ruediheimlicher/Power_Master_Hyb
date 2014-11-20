@@ -15,14 +15,14 @@
 
 // Hardware PINs DAC
 
-#define DAC_PORT  PORTC
-#define DAC_DDR   DDRC
+//#define DAC_PORT  PORTC
+//#define DAC_DDR   DDRC
 
 
 
 
 
-
+#define SOFT_TEENSY_CS    0
 #define SOFT_ADC_CS       1
 #define SOFT_DAC_CS       2
 

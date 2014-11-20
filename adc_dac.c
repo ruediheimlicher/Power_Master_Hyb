@@ -16,8 +16,13 @@ extern volatile uint8_t spi_txbuffer[SPI_BUFFERSIZE];
 extern volatile uint8_t adc_H;
 extern volatile uint8_t adc_L;
 
+extern volatile uint8_t out_H;
+extern volatile uint8_t out_L;
+extern volatile uint8_t in_H;
+extern volatile uint8_t in_L;
 
-#define DAC_CS  2
+
+//#define DAC_CS  2
 
 void dac_init(void)
 {
@@ -86,7 +91,7 @@ uint8_t spi_out(uint8_t dataout) // von LCD_DOG_Graph
 
 uint8_t spi_out16(uint8_t dataHI, uint8_t dataLO) // von LCD_DOG_Graph
 {
-   //cli();
+   cli();
    
    // OSZI_B_LO;
    DAC_CS_LO; // Chip enable
@@ -94,7 +99,14 @@ uint8_t spi_out16(uint8_t dataHI, uint8_t dataLO) // von LCD_DOG_Graph
    //_delay_us(1);
    uint8_t pos=0;
    SCL_LO; // SCL LO
-   _delay_us(1);
+   
+   SOFT_SPI_PORT &= ~(1<<SOFT_SCK);
+   //_delay_us(1);
+   SOFT_SPI_PORT |= (1<<SOFT_SCK);
+
+   
+   
+   //_delay_us(1);
    uint8_t tempdata=dataHI;
    
    for (pos=8;pos>0;pos--)
@@ -112,7 +124,7 @@ uint8_t spi_out16(uint8_t dataHI, uint8_t dataLO) // von LCD_DOG_Graph
          //SOFT_SPI_PORT &= ~(1<<SOFT_MOSI);
       }
       tempdata<<= 1;
-      _delay_us(1);
+     // _delay_us(1);
       //SCL_HI;
       SOFT_SPI_PORT |= (1<<SOFT_SCK);
       //_delay_us(1);
@@ -139,7 +151,7 @@ uint8_t spi_out16(uint8_t dataHI, uint8_t dataLO) // von LCD_DOG_Graph
          //SOFT_SPI_PORT &= ~(1<<SOFT_MOSI);
       }
       tempdata<<= 1;
-      _delay_us(1);
+      //_delay_us(1);
       //SCL_HI;
       SOFT_SPI_PORT |= (1<<SOFT_SCK);
       //_delay_us(1);
@@ -175,16 +187,16 @@ void display_write_byte(unsigned cmd_data, unsigned char data)
 void setDAC_test(void)
 {
    uint8_t i=0;
-   DAC_PORT &= ~(1<<DAC_CS); // CS DAC Lo
+   SOFT_SPI_PORT &= ~(1<<SOFT_DAC_CS); // CS DAC Lo
    _delay_us(1);
 
    for (i=0;i<0x0f;i++)
    {
-      DAC_PORT ^= (1<<3);
+      SOFT_SPI_PORT ^= (1<<3);
    }
 
    _delay_us(1);
-   DAC_PORT |= (1<<DAC_CS); // HI
+   SOFT_SPI_PORT |= (1<<SOFT_DAC_CS); // HI
 
 }
 //##############################################################################################
@@ -192,11 +204,9 @@ void setDAC_test(void)
 
 void setDAC(void)
 {
+   
+   SOFT_SPI_PORT ^= (1<<SOFT_SCK);
    // data ausgeben an DAC
-   uint16_t spiwaitcounter = WHILEMAX; // 5 ms
-   int32_t tmpDAC=0;
-   uint8_t dummy =0;
-   uint8_t i=0;
    //cli();
 //   DAC_PORT &= ~(1<<DAC_CS); // CS DAC Lo
 //   _delay_us(10);
@@ -208,9 +218,9 @@ void setDAC(void)
 }// end setDAC
 //##############################################################################################
 
-void getADC()
+void getADC(void)
 {
-   cli();
+   //cli();
    // wert lesen an ADC
    ADC_CS_LO;
    _delay_us(1); // init
@@ -260,7 +270,9 @@ void getADC()
       //_delay_us(1);
 
    }
-   //
+    
+   
+   _delay_us(1);
    ADC_CS_HI;
    _delay_us(1);
    SCL_HI;
@@ -268,5 +280,58 @@ void getADC()
 }
 
 //##############################################################################################
+
+uint8_t exch_data(uint8_t out_byte)
+{
+   {
+      uint8_t in_byte = 0;
+      cli();
+      // wert lesen an Slave, data senden an slave
+      
+      ADC_CS_LO; // Data lesen start
+      _delay_us(1);
+      SCL_LO;
+      //_delay_us(1);
+      
+      for (uint8_t i=SPI_BUFFERSIZE;i>0;i--)
+      {
+         SCL_HI;
+         //_delay_us(1);
+         
+         //adc_H |= (((SOFT_SPI_PIN & (1<<SOFT_MISO))==1)<< (7-i));
+         
+         
+         if (SOFT_SPI_PIN & (1<<SOFT_MISO)) // Pin ist HI
+         {
+            in_byte |= (1<< (i));
+         }
+         else    // Pin ist LO
+         {
+            in_byte  &= ~(1<< (i));
+         }
+         
+         //SOFT_SPI_PORT |=  (((out_byte & 0x80) > 0)<< SOFT_MOSI);
+         if ((out_byte & 0x80))
+         {
+            SOFT_SPI_PORT |= (1<< SOFT_MOSI); // HI
+         }
+         else
+         {
+            SOFT_SPI_PORT &= ~(1<< SOFT_MOSI); // LO
+         }
+         out_byte >>= 1;
+         
+         SCL_LO;
+         //
+         
+      }
+      _delay_us(1);
+       //
+      ADC_CS_HI;
+      _delay_us(1);
+      SCL_HI;
+      sei();
+   }
+}
 
 

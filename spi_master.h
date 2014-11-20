@@ -16,12 +16,15 @@
 #define SPI_PIN      PINB
 #define SPI_DDR      DDRB
 
-#define SPI_CS       1
-#define SPI_SS       2
+#define SPI_CS       3
+#define SPI_SS       4
 
-#define SPI_MOSI     3
-#define SPI_MISO     4
-#define SPI_SCK      5
+#define SPI_MOSI     5
+#define SPI_MISO     6
+#define SPI_SCK      7
+
+
+
 
 
 volatile uint8_t spi_rxbuffer[SPI_BUFFERSIZE];

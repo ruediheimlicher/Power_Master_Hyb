@@ -3,11 +3,11 @@
  * defines
  */
 
-#define SPI_BUFFERSIZE 8
+#define SPI_BUFFERSIZE 4
 #define WHILEMAX 0xFFFF // Wartezeit in while-Schleife : 5 ms
 
-#define UPDATE_COUNT  0x04
-#define ROT_HI  0xFF
+#define UPDATE_COUNT  0x02
+#define ROT_HI  0x1FF
 
 #define UPDATE_MEAS  0
 #define UPDATE_DISP  1
@@ -19,15 +19,6 @@
 
 #define TASTATUR_ON            0
 
-#define MANUELL_PORT          PORTD
-#define MANUELL_DDR           DDRD
-#define MANUELL_PIN           PIND
-
-#define MANUELL               7	// Bit 7 von Status
-#define MANUELLPIN            6	// Pin 6 von PORT D fuer Anzeige Manuell
-#define MANUELLNEU            7	// Pin 7 von Status. Gesetzt wenn neue Schalterposition eingestellt
-#define MANUELLTIMEOUT        100 // Loopled-counts bis Manuell zurueckgesetzt wird. 02FF: ca. 100 s
-
 #define ROTARY_PORT          PORTD
 #define ROTARY_DDR           DDRD
 #define ROTARY_PIN            PIND
@@ -38,9 +29,9 @@
 
 
 // OSZI
-#define OSZIPORT           PORTB
-#define OSZIPORTDDR        DDRB
-#define OSZIPORTPIN        PINB
+#define OSZIPORT           PORTC
+#define OSZIPORTDDR        DDRC
+#define OSZIPORTPIN        PINC
 #define OSZI_PULS_A        6
 #define OSZI_PULS_B        7
 

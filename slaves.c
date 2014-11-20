@@ -11,22 +11,6 @@
 #include <avr/io.h>
 #include "twimaster.c"
 
-/*
-#define OSZIAPORT				PORTA
-#define OSZIAPORTDDR			DDRA
-#define OSZIAPORTPIN			PINA
-#define PULSA					0
-
-#ifndef OSZIALO
-#define OSZIALO OSZIAPORT &= ~(1<<PULSA)
-#endif
-#ifndef OSZIAHI
-#define OSZIAHI OSZIAPORT |= (1<<PULSA)
-#endif
-#ifndef OSZIATOG
-#define OSZIATOG OSZIAPORT ^= (1<<PULSA)
-#endif
-*/
 #define TWI_BUFFERSIZE 8
 #define tag_data_size 32
 #define tag_start_adresse 0

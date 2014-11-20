@@ -42,16 +42,6 @@
 #define LCD_CLOCK_PIN           7
 
 
-/*
- // defines Board Q
- #define LCD_PORT                PORTC
- #define LCD_DDR						DDRC
-
-#define LCD_RSDS_PIN            0
-#define LCD_ENABLE_PIN          1
-#define LCD_CLOCK_PIN           2
-*/
-#define LCD_BACKLIGHT_PIN       7
 
 /* number of columns on the display */
 #define LCD_COLS 20
