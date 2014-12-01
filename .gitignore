@@ -12,3 +12,4 @@ Images.*
 *.sym
 build/
 run*
+.dep/

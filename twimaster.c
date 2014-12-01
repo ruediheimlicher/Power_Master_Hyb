@@ -33,9 +33,6 @@
 #define READ_NACKERR		0xA6
 
 
-//#define OSZIPORT				PORTA
-//#define OSZIPORTDDR			DDRA
-//#define OSZIPORTPIN			PINA
 
 #define PULSA					0
 

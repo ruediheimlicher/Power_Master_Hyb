@@ -3,10 +3,12 @@
  * defines
  */
 
+#define TEST 0
+
 #define SPI_BUFFERSIZE 4
 #define WHILEMAX 0xFFFF // Wartezeit in while-Schleife : 5 ms
 
-#define UPDATE_COUNT  0x02
+#define UPDATE_COUNT  0x0F
 #define ROT_HI  0x1FF
 
 #define UPDATE_MEAS  0
@@ -25,15 +27,31 @@
 #define ROTARY_PIN0           0
 #define ROTARY_PIN1           1
 
+#define ROTARY_MIN             400
+
+// admin
+#define ADMIN_PORT          PORTA
+#define ADMIN_DDR           DDRA
+#define ADMIN_PIN           PINA
+#define TEENSY_AKTIV       7           // Anzeige, dass Teensy vorhanden
 
 
+// code SPI
+
+#define WRITE_SPANNUNG        0x01
+#define WRITE_STROM           0x02
+#define READ_SPANNUNG         0x03
+#define READ_STROM            0x04
+
+
+#define SPI_RUN_BIT            7   // MASTER soll SPI abfragen
 
 // OSZI
-#define OSZIPORT           PORTC
-#define OSZIPORTDDR        DDRC
-#define OSZIPORTPIN        PINC
-#define OSZI_PULS_A        6
-#define OSZI_PULS_B        7
+#define OSZIPORT           PORTA
+#define OSZIPORTDDR        DDRA
+#define OSZIPORTPIN        PINA
+#define OSZI_PULS_A        0
+#define OSZI_PULS_B        1
 
 #define OSZI_A_LO OSZIPORT &= ~(1<<OSZI_PULS_A)
 #define OSZI_A_HI OSZIPORT |= (1<<OSZI_PULS_A)

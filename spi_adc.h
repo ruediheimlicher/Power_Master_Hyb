@@ -20,7 +20,7 @@
 
 #define SPI_DDR            DDRB    //DDRB
 #define SPI_PORT           PORTB   //PORTB
-#define SPI_CS_ADC_PIN                 2
+#define SPI_CS_ADC                 2
 
 #define SPI_MOSI_PIN               5
 #define SPI_MISO_PIN               6

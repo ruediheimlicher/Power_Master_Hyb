@@ -55,18 +55,12 @@ ISR (TIMER1_OVF_vect)
 void spi_master_init (void)
 {
    /*
-    // in defines.h:
-    #define SPI_PORT     PORTB
-    #define SPI_PIN      PINB
-    #define SPI_DDR      DDRB
+    #define SPI_CS       1
+    #define SPI_SS       2
     
-    #define SPI_CS       3
-    #define SPI_SS       4
-    
-    #define SPI_MOSI     5
-    #define SPI_MISO     6
-    #define SPI_SCK      7
-    
+    #define SPI_MOSI     3
+    #define SPI_MISO     4
+    #define SPI_SCK      5
 
     */
    
@@ -80,8 +74,6 @@ void spi_master_init (void)
    SPI_PORT |= (1<<SPI_CS); // HI, ohne Optokoppler
    
    SPCR0 |= (1<<MSTR0);// Set as Master
-   
- //  SPCR0 |= (1<<CPOL0)|(1<<CPHA0);
    
    SPI_PORT &= ~(1<<SPI_MISO); // LO
    
@@ -107,9 +99,8 @@ void setSPI_Teensy(void)
 {
    uint8_t outindex=0;
    SPI_PORT &=  ~(1<<SPI_CS); // CS LO, Start, Slave soll erstes Byte laden
-   _delay_us(3);
-   uint8_t spidelay = 1;
-   uint8_t spiwaitdelay = 4;
+//   _delay_us(1);
+   
    
    //SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
    //_delay_us(1);
@@ -122,9 +113,9 @@ void setSPI_Teensy(void)
       //for (outindex=0;outindex < 4;outindex++)
    {
       //OSZI_A_LO;
-      // _delay_us(spidelay);
+      // _delay_us(1);
       SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
-      //_delay_us(spidelay);
+      //_delay_us(1);
       
       SPDR0 = spi_txbuffer[outindex];
       
@@ -133,14 +124,13 @@ void setSPI_Teensy(void)
           spiwaitcounter++;
       }
       spiwaitcounter=0;
-      _delay_us(spidelay);
+      //_delay_us(1);
       //uint8_t incoming = SPDR0;
       
       if (outindex == 0) // slave warten lassen, um code zu laden
       {
          uint8_t incoming = SPDR0;
-         
-         _delay_us(spiwaitdelay);
+         _delay_us(3);
       }
       else if (outindex ==1) // code lesen, spistatus steuern
       {
@@ -149,7 +139,7 @@ void setSPI_Teensy(void)
          if (spi_rxbuffer[0] & (1<<TEENSY_SEND))
          {
             spistatus |= (1<< TEENSY_SEND);
-            _delay_us(spiwaitdelay);
+            _delay_us(3);
          }
          else
          {
@@ -162,13 +152,13 @@ void setSPI_Teensy(void)
          if (spi_rxbuffer[0] & 0x7F)
          {
          spi_rxbuffer[outindex-1] = SPDR0; // erster durchgang liest dummy
-         _delay_us(spiwaitdelay);
+         _delay_us(3);
          }
          //spi_rxbuffer[outindex] = incoming;
       }
 
       
-      _delay_us(spidelay);
+      //_delay_us(3);
       SPI_PORT |= (1<<SPI_SS); // SS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
       //OSZI_A_HI;
       
@@ -182,7 +172,7 @@ void setSPI_Teensy(void)
    //char rest = SPDR;
    
    // wichtig
-   _delay_us(10);
+   _delay_us(5);
    
    //SPI_PORT |= (1<<SPI_SS); // SS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
    //_delay_us(1);

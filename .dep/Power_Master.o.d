@@ -19,7 +19,7 @@ Power_Master.o: Power_Master.c \
  /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/stdlib.h \
  /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/include/stddef.h \
  /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/avr/wdt.h \
- lcd.c lcd.h adc.c adc.h adc_dac.c adc_dac.h \
+ lcd.c lcd.h adc.c adc.h soft_spi.c soft_spi.h \
  /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/stdio.h \
  /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/include/stdarg.h \
  defines.h spi_adc.c spi_adc.h utils.c \
@@ -31,7 +31,7 @@ Power_Master.o: Power_Master.c \
  /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/util/twi.h \
  twimaster.h spi_master.c \
  /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/avr/signal.h \
- spi_master.h
+ spi_master.h analog.c analog.h
 
 /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/avr/io.h:
 
@@ -81,9 +81,9 @@ adc.c:
 
 adc.h:
 
-adc_dac.c:
+soft_spi.c:
 
-adc_dac.h:
+soft_spi.h:
 
 /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/stdio.h:
 
@@ -122,3 +122,7 @@ spi_master.c:
 /usr/local/CrossPack-AVR-20130212/lib/gcc/avr/4.6.2/../../../../avr/include/avr/signal.h:
 
 spi_master.h:
+
+analog.c:
+
+analog.h:

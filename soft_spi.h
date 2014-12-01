@@ -20,15 +20,30 @@
 
 
 
+/*
 
+#define SOFT_SWITCH_CS    0
 
-#define SOFT_TEENSY_CS    0
-#define SOFT_ADC_CS       1
+#define SOFT_ADC_CS       1 // funktioniert nicht mit PIN 0
 #define SOFT_DAC_CS       2
 
 #define SOFT_SCK      3
 #define SOFT_MOSI     4
 #define SOFT_MISO     5
+*/
+
+#define SOFT_SWITCH_CS    2
+
+#define SOFT_ADC_CS       3 // funktioniert nicht mit PIN 0
+#define SOFT_DAC_CS       4
+
+#define SOFT_SCK      5
+#define SOFT_MOSI     6
+#define SOFT_MISO     7
+
+
+
+
 
 #define MAXSPANNUNG  756
 #define MINSPANNUNG  500
@@ -47,8 +62,15 @@
 #define DAC_CS_HI        SOFT_SPI_PORT |= (1<<SOFT_DAC_CS)
 #define DAC_CS_LO        SOFT_SPI_PORT &= ~(1<<SOFT_DAC_CS)
 
+#define SWITCH_CS_HI        SOFT_SPI_PORT |= (1<<SOFT_SWITCH_CS)
+#define SWITCH_CS_LO        SOFT_SPI_PORT &= ~(1<<SOFT_SWITCH_CS)
+
+
 #define SCL_HI       SOFT_SPI_PORT |= (1<<SOFT_SCK)
 #define SCL_LO       SOFT_SPI_PORT &= ~(1<<SOFT_SCK)
 
 #define DATA_HI      SOFT_SPI_PORT |= (1<<SOFT_MOSI)
 #define DATA_LO      SOFT_SPI_PORT &= ~(1<<SOFT_MOSI)
+
+
+
