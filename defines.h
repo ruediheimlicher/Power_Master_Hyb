@@ -3,7 +3,9 @@
  * defines
  */
 
-#define TEST 0
+#define TEST 1
+
+#define OHNE_TEENSY 1
 
 #define SPI_BUFFERSIZE 4
 #define WHILEMAX 0xFFFF // Wartezeit in while-Schleife : 5 ms
@@ -27,14 +29,22 @@
 #define ROTARY_PIN0           0
 #define ROTARY_PIN1           1
 
-#define ROTARY_MIN             400
+#define ROTARY_MIN             200
 
 // admin
 #define ADMIN_PORT          PORTA
 #define ADMIN_DDR           DDRA
 #define ADMIN_PIN           PINA
-#define TEENSY_AKTIV       7           // Anzeige, dass Teensy vorhanden
+#define TEENSY_DETECTED          7           // Anzeige, dass Teensy vorhanden. Active LO
+#define TEENSY_LED          6 
 
+// switch in
+#define SWITCH_PORT          PORTA
+#define SWITCH_DDR           DDRA
+#define SWITCH_PIN           PINA
+#define SWITCH_0              2
+#define SWITCH_1              3
+#define SWITCH_2              4
 
 // code SPI
 

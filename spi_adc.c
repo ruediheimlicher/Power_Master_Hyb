@@ -24,7 +24,7 @@ void spi_adc_restore()
 //   SPI_PORT |= (1<<(SPI_MOSI_PIN));  //setbitHigh MOSI Pin
 //   SPI_PORT |= (1<<(SPI_MISO_PIN));  //setbitHigh MOSI Pin
    SPI_PORT &= ~(1<<(SPI_SCK_PIN));   //setbitHigh CLK  Pin
-   SPCR0 |= (1<<CPOL0)|(1<<CPHA0);    //|(0<<SPR0);
+   SPCR0 &= ~(1<<CPOL0)|(1<<CPHA0);    //|(0<<SPR0);
 //   SPI_PORT &= ~(1<<(SPI_CS_ADC));    //setbitHigh CS   Pin
    
 }

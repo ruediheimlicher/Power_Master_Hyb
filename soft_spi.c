@@ -23,6 +23,7 @@ extern volatile uint8_t in_L;
 
 //extern volatile uint8_t switch_in[8];
 
+#define nop()  asm volatile("nop\n\t"::)
 
 //#define DAC_CS  2
 
@@ -31,9 +32,12 @@ void dac_init(void)
    SOFT_SPI_DDR |= (1<<SOFT_DAC_CS); // Ausgang fuer CS DAC
    SOFT_SPI_PORT |= (1<<SOFT_DAC_CS); // HI
    
-   SOFT_SPI_DDR |= (1<<SOFT_ADC_CS); // Ausgang fuer CS ADC
-   SOFT_SPI_PORT |= (1<<SOFT_ADC_CS); // HI
+   SOFT_SPI_DDR |= (1<<SOFT_DAC_LOAD); // Ausgang fuer CS ADC
+   SOFT_SPI_PORT |= (1<<SOFT_DAC_LOAD); // HI
 
+   SOFT_SPI_DDR |= (1<<SOFT_SWITCH_LOAD); // Ausgang fuer LOAD SWITCH
+   SOFT_SPI_PORT |= (1<<SOFT_SWITCH_LOAD); // HI
+   
    SOFT_SPI_DDR |= (1<<SOFT_SWITCH_CS); // Ausgang fuer CS SWITCH
    SOFT_SPI_PORT |= (1<<SOFT_SWITCH_CS); // HI
    
@@ -178,6 +182,7 @@ uint8_t spi_out16(uint8_t dataHI, uint8_t dataLO) // von LCD_DOG_Graph
    return datain;
 }
 
+
 uint8_t spi_out_long(uint16_t data) // von LCD_DOG_Graph
 {
    cli();
@@ -192,7 +197,7 @@ uint8_t spi_out_long(uint16_t data) // von LCD_DOG_Graph
    SOFT_SPI_PORT &= ~(1<<SOFT_SCK);
    //_delay_us(1);
    SOFT_SPI_PORT |= (1<<SOFT_SCK);
-
+   
    
    
    //_delay_us(1);
@@ -214,7 +219,7 @@ uint8_t spi_out_long(uint16_t data) // von LCD_DOG_Graph
          //SOFT_SPI_PORT &= ~(1<<SOFT_MOSI);
       }
       tempdata<<= 1;
-     // _delay_us(1);
+      // _delay_us(1);
       //SCL_HI;
       SOFT_SPI_PORT |= (1<<SOFT_SCK);
       //_delay_us(1);
@@ -225,7 +230,7 @@ uint8_t spi_out_long(uint16_t data) // von LCD_DOG_Graph
    
    
    tempdata=(data & 0x00FF);
-
+   
    for (pos=8;pos>0;pos--)
    {
       
@@ -250,11 +255,65 @@ uint8_t spi_out_long(uint16_t data) // von LCD_DOG_Graph
       
    }
    
-  
+   
    
    //  OSZI_B_HI;
    
    DAC_CS_HI;// Chip disable
+   
+   sei();
+   return datain;
+}
+
+
+//##############################################################################################
+
+
+
+uint8_t spi_out_7612(uint16_t data) // von LCD_DOG_Graph
+{
+   cli();
+   
+   data &= 0x0FFF; // 12 bit
+   
+   data |= 0x2000; //Output A
+   // OSZI_B_LO;
+   uint8_t datain=0xFF;
+   //_delay_us(1);
+   uint8_t pos=0;
+   SCL_LO; // SCL LO
+   uint16_t tempdata=data;
+   
+   for (pos=14;pos>0;pos--)
+   {
+      
+      if (tempdata & 0x2000)
+      {
+         DATA_HI;
+         //SOFT_SPI_PORT |= (1<<SOFT_MOSI);
+         
+      }
+      else
+      {
+         DATA_LO;
+         //SOFT_SPI_PORT &= ~(1<<SOFT_MOSI);
+      }
+      tempdata<<= 1;
+     // _delay_us(1);
+      SCL_HI;
+      //SOFT_SPI_PORT |= (1<<SOFT_SCK);
+      //_delay_us(1);
+      SCL_LO;
+      //SOFT_SPI_PORT &= ~(1<<SOFT_SCK);
+      
+   }
+   
+   
+   
+  
+   
+   //  OSZI_B_HI;
+   
    
    sei();
    return datain;
@@ -326,18 +385,38 @@ void setDAC_long(uint16_t data)
 
 //##############################################################################################
 
+void setDAC7612(uint16_t data)
+{
+   DAC_CS_LO;
+   //_delay_us(1);
+   nop();
+   SCL_LO; // SCL LO
+   spi_out_7612(data);
+   nop();
+   //_delay_us(1);
+   
+   DAC_LOAD_LO;
+   //_delay_us(1);
+   nop();
+   DAC_LOAD_HI;
+   nop();
+   //_delay_us(1);
+   DAC_CS_HI;
+   
+}
 
+//##############################################################################################
 
 void getADC(void)
 {
    //cli();
    // wert lesen an ADC
    
-   ADC_CS_LO;
+   DAC_LOAD_LO;
    _delay_us(1); // init
-   ADC_CS_HI;
+   DAC_LOAD_HI;
    _delay_us(3); // conv
-   ADC_CS_LO; // Data lesen start
+   DAC_LOAD_LO; // Data lesen start
    _delay_us(1);
    SCL_LO;
    //_delay_us(1);
@@ -384,7 +463,7 @@ void getADC(void)
     
    
    _delay_us(1);
-   ADC_CS_HI;
+   DAC_LOAD_HI;
    _delay_us(1);
    SCL_HI;
    sei();
@@ -398,22 +477,25 @@ void getADC(void)
 
 uint8_t getSwitch(void)
 {
-   cli();
+//   cli();
+   
+   SWITCH_CS_LO;
+   
    // wert lesen an Switch
    uint8_t temp=0;
    SCL_HI;
    //_delay_us(1);
-   SWITCH_CS_LO; // Data lesen start
-   PORTA &= ~(1<<0);
+   SWITCH_LOAD_LO; // Data lesen start
    //_delay_us(1);
-   PORTA |= (1<<0);
-    SWITCH_CS_HI;
+   
+   SWITCH_LOAD_HI;
    //_delay_us(1);
-  // PORTA &= ~(1<<SOFT_SWITCH_CS);
+  // PORTA &= ~(1<<SOFT_SWITCH_LOAD);
 
    SCL_LO;
    //_delay_us(2);
    
+  
    for (uint8_t i=0;i<8;i++)
    {
       SCL_LO;
@@ -438,14 +520,13 @@ uint8_t getSwitch(void)
       
    }
    
-   
-   
    //_delay_us(1);
    SWITCH_CS_HI;
-   PORTA |= (1<<0);
    //_delay_us(1);
    //SCL_HI;
    sei();
+   
+   SWITCH_CS_HI;
    return temp;
 }
 
@@ -459,7 +540,7 @@ uint8_t exch_data(uint8_t out_byte)
       cli();
       // wert lesen an Slave, data senden an slave
       
-      ADC_CS_LO; // Data lesen start
+      DAC_LOAD_LO; // Data lesen start
       _delay_us(1);
       SCL_LO;
       //_delay_us(1);
@@ -498,7 +579,7 @@ uint8_t exch_data(uint8_t out_byte)
       }
       _delay_us(1);
        //
-      ADC_CS_HI;
+      DAC_LOAD_HI;
       _delay_us(1);
       SCL_HI;
       sei();

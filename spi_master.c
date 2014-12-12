@@ -13,6 +13,7 @@ Verdrahtung:	MISO(Master) --> MISO(Slave)
 #include <avr/signal.h>
 
 #include "spi_master.h"
+
 unsigned char status = 0;
 volatile unsigned char count;
 
@@ -77,18 +78,31 @@ void spi_master_init (void)
 	
    SPI_DDR |= (1<<SPI_CS); // Chip select
    //SPI_PORT &= ~(1<<SPI_CS); // LO, invertiert im Optokoppler HI
-   SPI_PORT |= (1<<SPI_CS); // HI, ohne Optokoppler
+   SPI_PORT |= (1<<SPI_SS); // HI,
+   
+  SPI_PORT |= (1<<SPI_CS); // HI, ohne Optokoppler
    
    SPCR0 |= (1<<MSTR0);// Set as Master
    
  //  SPCR0 |= (1<<CPOL0)|(1<<CPHA0);
    
    SPI_PORT &= ~(1<<SPI_MISO); // LO
+   /*
+    SPI2X 	SPR1 	SPR0     SCK Frequency
+    0       0        0     fosc/4
+    0       0        1     fosc/16
+    0       1        0     fosc/64
+    0       1        1     fosc/128
+    1       0        0     fosc/2
+    1       0        1     fosc/8
+    1       1        0     fosc/32
+    1       1        1     fosc/64
+    */
    
    SPCR0 |= (1<<SPR00);               // div 16 SPI2X: div 8
    //SPCR0 |= (1<<SPR10);               // div 64 SPI2X: div 32
    //SPCR |= (1<<SPR1) | (1<<SPR0);   // div 128 SPI2X: div 64
-   //SPCR0 |= (1<<SPI2X0);
+  // SPCR0 |= (1<<SPI2X0);
    
    SPCR0 |= (1<<SPE0); // Enable SPI
    status = SPSR0;								//Status loeschen
@@ -105,11 +119,12 @@ void spi_master_restore(void)
 
 void setSPI_Teensy(void)
 {
+   uint8_t spidelay = 5;
+   uint8_t spiwaitdelay = 4;
+
    uint8_t outindex=0;
    SPI_PORT &=  ~(1<<SPI_CS); // CS LO, Start, Slave soll erstes Byte laden
-   _delay_us(3);
-   uint8_t spidelay = 1;
-   uint8_t spiwaitdelay = 4;
+   _delay_us(spidelay);
    
    //SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
    //_delay_us(1);
@@ -124,7 +139,7 @@ void setSPI_Teensy(void)
       //OSZI_A_LO;
       // _delay_us(spidelay);
       SPI_PORT &= ~(1<<SPI_SS); // SS LO, Start, Slave soll erstes Byte laden
-      //_delay_us(spidelay);
+      _delay_us(spidelay);
       
       SPDR0 = spi_txbuffer[outindex];
       
@@ -133,7 +148,7 @@ void setSPI_Teensy(void)
           spiwaitcounter++;
       }
       spiwaitcounter=0;
-      _delay_us(spidelay);
+      //_delay_us(spidelay);
       //uint8_t incoming = SPDR0;
       
       if (outindex == 0) // slave warten lassen, um code zu laden
@@ -189,6 +204,7 @@ void setSPI_Teensy(void)
    
    SPI_PORT |= (1<<SPI_CS); // CS HI End, Slave soll  Byte-ZŠhler zurŸcksetzen
    //OSZI_A_HI;
+   //_delay_us(10);
 
 }
 
@@ -206,17 +222,53 @@ unsigned char SPI_get_put_char(uint8_t cData)
    /* Return data register */
    return SPDR0;
 }
-/*
-void master_transmit (unsigned char data)
+
+uint8_t  get_SR(uint8_t outData)
 {
-	PORTB &= ~(1<<PB0);						//SS am Slave Low --> Beginn der Übertragung
-	SPDR = data;								//Schreiben der Daten
-	//while (!(SPSR & (1<<SPIF)));
-   while(!(SPSR & (1<<SPIF)) && spiwaitcounter < WHILEMAX)
+   SWITCH_CS_LO;
+   uint8_t in = 0;
+   SCL_HI;
+   _delay_us(1);
+   SWITCH_LOAD_LO; // Data lesen start
+   _delay_us(1);
+   SWITCH_LOAD_HI;
+   _delay_us(1);
+   SCL_LO;
+   //return 0;
+   //SPCR0 |= (1<<CPOL0);
+   SPDR0 = outData;
+   while(!(SPSR0 & (1<<SPIF0)) && spiwaitcounter < WHILEMAX)
    {
       spiwaitcounter++;
    }
-
-	PORTB |= (1<<PB0);							//SS High --> Ende der Übertragung
+   
+   //SPCR0 &= ~(1<<CPOL0);
+   //in = SPDR0;
+   
+   SWITCH_CS_HI;
+   return SPDR0;
+   
+   
+   
+   
 }
-*/
+
+uint8_t set_SR(uint8_t outData)
+{
+   SWITCH_CS_LO;
+   _delay_us(1);
+   SPDR0 = outData;
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+   
+   //SPCR0 &= ~(1<<CPOL0);
+//uint8_t in = SPDR0;
+   
+   SWITCH_CS_HI;
+   SWITCH_CS_LO;
+   return SPDR0;
+
+   
+}

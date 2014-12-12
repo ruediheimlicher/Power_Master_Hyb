@@ -80,7 +80,8 @@ volatile uint8_t outbuffer[16];
 volatile uint8_t rxdata =0;
 uint8_t erfolg =0;
 
-
+extern volatile uint8_t lcd_delaycount;
+extern volatile uint8_t lcd_status;
 
 extern volatile uint8_t rxbuffer[TWI_BUFFERSIZE];
 extern volatile uint8_t txbuffer[TWI_BUFFERSIZE];
@@ -93,7 +94,7 @@ volatile uint8_t twi_Stat_count=0;	//	Anzahl Resets nach erfolglosen TWI-Aufrufe
 
 volatile uint16_t rot_eingang_count=0x00;
 volatile uint16_t rot_eingang_plus=0x00;
-volatile uint16_t rot_eingang_A=0x00;
+//volatile uint16_t rot_eingang_A=0x00;
 volatile uint16_t rot_count_A=0x00;
 volatile uint16_t rot_loopcount_L=0x00;
 volatile uint16_t rot_loopcount_H=0x0000;
@@ -132,6 +133,7 @@ volatile uint8_t teensycode = 0;
 
 // Schalter
 volatile uint8_t switch_in = 0;
+volatile uint8_t switch_out = 0;
 
 // var fuer soft-spi
 volatile uint8_t out_H=0;
@@ -232,10 +234,20 @@ void device_init(void)
    OSZIPORTDDR |= (1<<OSZI_PULS_B);		//Pin 1 von  als Ausgang fuer LED TWI
    OSZIPORT |= (1<<OSZI_PULS_B);		//Pin   von   als Ausgang fuer OSZI
 	
+   SWITCH_DDR &= ~(1<< SWITCH_0); // Eingang Switch Bit 0
+   SWITCH_DDR &= ~(1<< SWITCH_1); // Eingang Switch Bit 1
+   SWITCH_DDR &= ~(1<< SWITCH_2); // Eingang Switch Bit 2
+
+   SWITCH_PORT  |= (1<< SWITCH_0); // Eingang Switch Bit 0
+   SWITCH_PORT  |= (1<< SWITCH_1); // Eingang Switch Bit 1
+   SWITCH_PORT  |= (1<< SWITCH_2); // Eingang Switch Bit 2
+
    
-   ADMIN_DDR &= ~(1<< TEENSY_AKTIV); // Eingang fuer Anmeldung Teensy
-   ADMIN_PORT &= ~(1<< TEENSY_AKTIV); //LO
-   
+   ADMIN_DDR &= ~(1<< TEENSY_DETECTED); // Eingang fuer Anmeldung Teensy
+   ADMIN_PORT &= ~(1<< TEENSY_DETECTED); //LO
+ //  ADMIN_DDR |= (1<< TEENSY_LED); // Ausgang fuer Anzeige Teensy present
+ //  ADMIN_PORT &= ~(1<< TEENSY_LED); //LO
+  
    /*
    // TWI vorbereiten
 	TWI_DDR |= (1<<SDA_PIN);//Bit 4 von PORT C als Ausgang für SDA
@@ -245,6 +257,17 @@ void device_init(void)
 	TWI_PORT |= (1<<SCL_PIN); // HI
    */
    
+   
+   
+   
+   
+   //
+   SOFT_SPI_DDR |= (1<<SOFT_SWITCH_LOAD); // Ausgang fuer LOAD SWITCH
+   SOFT_SPI_PORT |= (1<<SOFT_SWITCH_LOAD); // HI
+   
+   SOFT_SPI_DDR |= (1<<SOFT_SWITCH_CS); // Ausgang fuer CS SWITCH
+   SOFT_SPI_PORT |= (1<<SOFT_SWITCH_CS); // HI
+
 }
 
 void rotary_init(void)
@@ -268,7 +291,7 @@ void rotary_init(void)
 ISR(PCINT3_vect)
 {
    //rot_eingang0++;
-   OSZI_A_LO;
+   //OSZI_A_LO;
    
    uint8_t rot_pin0 = ROTARY_PIN & 0x01; //Eingang 0
    uint8_t rot_pin1 = (ROTARY_PIN & 0x02); //Eingang 1
@@ -277,17 +300,15 @@ ISR(PCINT3_vect)
    
    akt_rot_pin = new_rot_pin ^ old_rot_pin;
    
-   uint16_t deltaA=0xF00;
-   uint16_t deltaB=0x64;
+   uint16_t delta=0x2F;
    //uint16_t deltaA=0x80;
    
    if (rot_pin1 == 0)
    {
       rot_control++;
-      if (rot_loopcount_H  > 0x0F)
+      if (rot_loopcount_H  > 0x08)
       {
-         deltaA = 0xF0;
-         deltaB=0x02;
+         delta=0x02;
           //deltaA = 0x08;
       }
       rot_loopcount_H=0;
@@ -298,29 +319,25 @@ ISR(PCINT3_vect)
    
    if ((rot_pin0==1) && (rot_pin1 == 0))
    {
-      if (0xFFFF - rot_eingang_A > deltaA)
+      if (0x0FFF - soll_spannung > delta)
       {
-         rot_eingang_A += deltaA;
-         soll_spannung += deltaB;
+         soll_spannung += delta;
       }
       else
       {
-         rot_eingang_A = 0xFFFF;
-         soll_spannung = 0xFFFF;
+         soll_spannung = 0x0FFF;
       }
       
    }
    else if ((rot_pin0==0) && (rot_pin1 == 0))
    {
-      if (rot_eingang_A > ROTARY_MIN + deltaA)
+      if (soll_spannung > ROTARY_MIN + delta)
       {
-         rot_eingang_A -= deltaA;
-         soll_spannung -= deltaB;
+         soll_spannung -= delta;
          
       }
       else
       {
-         rot_eingang_A = ROTARY_MIN;
          soll_spannung = ROTARY_MIN;
       }
    }
@@ -329,10 +346,10 @@ ISR(PCINT3_vect)
    
    
   // soll_spannung = rot_eingang_A;
-   spi_txbuffer[2] =  (rot_eingang_A & 0x00FF);
-   spi_txbuffer[3] = ((rot_eingang_A & 0xFF00)>>8);
+   spi_txbuffer[2] =  (soll_spannung & 0x00FF);
+   spi_txbuffer[3] = ((soll_spannung & 0xFF00)>>8);
    
-   OSZI_A_HI;
+   //OSZI_A_HI;
 }
 
 
@@ -364,8 +381,8 @@ void timer0 (void) // Grundtakt fuer Stoppuhren usw.
 ISR (TIMER0_OVF_vect)
 {
    rot_loopcount_L++;
-   //OSZI_A_TOGG;
-   if (rot_loopcount_L >= UPDATE_COUNT)
+   //OSZI_B_TOGG;
+    if (rot_loopcount_L >= UPDATE_COUNT)
    {
       //OSZI_A_TOGG;
       //updateOK =1;
@@ -437,7 +454,7 @@ static void control_loop(void)
       // count up.
       if (TEST)
       {
-         lcd_gotoxy(19,1);
+         lcd_gotoxy(18,0);
          lcd_putc('U');
       }
       tmp=1+ soll_spannung  - ist_spannung; // voltage diff
@@ -484,14 +501,14 @@ static void control_loop(void)
    {
       dac_val=0x0FFF; //max, 12bit
    }
-   if (dac_val<400)
+   if (dac_val<200)
    {  // the output is zero below 400 due to transistor threshold
-      dac_val=400;
+      dac_val=200;
    }
-   //lcd_gotoxy(14,0);
-   //lcd_putint12(dac_val);
+ //  lcd_gotoxy(14,1);
+ //  lcd_putint12(dac_val);
 
-   setDAC_long(dac_val<<4);
+   setDAC7612(dac_val); // hier ODER in main!
    
    
 }
@@ -542,6 +559,7 @@ int main (void)
    
    //DDRB |=(1<<0);
    device_init();
+   initADC();
    
 //   spi_txbuffer[0]= '$';
    uint8_t k=0;
@@ -551,68 +569,86 @@ int main (void)
       spi_rxbuffer[k]= 0x00;
    }
 
-   volatile uint16_t U_I_Array[4];
+//   volatile uint16_t U_I_Array[4];
    
    timer0();
    sei();
    
    //spistatus |= (1<< TEENSY_SEND);
    
-   soll_spannung = 600;
-   rot_eingang_A = 600<<4;
+   soll_spannung = 400;
    currentcontrol=1; // 0=voltage control, 1 current control
    //lcd_gotoxy(6,0);
    //lcd_putsignedint(-12);
-   soll_strom = 600;
+   soll_strom = 800;
    
    
 #pragma mark while
 	while (1)
 	{
 		//OSZI_A_TOGG;
-      if (ADMIN_PIN & (1<<TEENSY_AKTIV))
+      
+      // Teensy angeschlossen?
+      
+      if (ADMIN_PIN & (1<<TEENSY_DETECTED))// || OHNE_TEENSY) // TEENSY_DETECT ist activ LO!!!
       {
-         spistatus |= (1<< TEENSY_RECV);
-      }
+         //spistatus |= (1<< TEENSY_RECV);
+        spistatus &= ~(1<< TEENSY_RECV);
+         //ADMIN_PIN &= ~(1<<TEENSY_LED); // Teensy LED OFF
+               }
       else
       {
-         spistatus &= ~(1<< TEENSY_RECV);
-      }
-      
+         //spistatus &= ~(1<< TEENSY_RECV);
+         spistatus |= (1<< TEENSY_RECV);     // active LO
+         //ADMIN_PIN |= (1<<TEENSY_LED); // Teensy LED ON
 
-     
- //     if (updateOK & (1<<UPDATE_MEAS))
+      }
+
+      //      if (TEST && (updateOK & (1<<UPDATE_MEAS)))
       {
          //OSZI_A_TOGG;
          updateOK &= ~(1<<UPDATE_MEAS);
          //updateOK = 0;
          //OSZI_A_TOGG;
-         //        spistatus |= (1<< TEENSY_RECV);
          
          spiloop++;
          //if (spiloop>0x01)
          {
-            OSZI_B_LO;
+            //OSZI_B_LO;
             spiloop=0;
-            OSZI_B_HI;
-            //spi_master_restore();
-            // if (ADMIN_PIN & (1<<TEENSY_AKTIV))
+            //OSZI_B_HI;
+            // if (ADMIN_PIN & (1<<TEENSY_DETECTED))
+            
+         //   spistatus |= (1<< TEENSY_RECV);
             
             if (spistatus & (1<< TEENSY_RECV)) // Teensy ist da, abfragen
             {
-               //OSZI_B_LO;
-               //lcd_gotoxy(19,0);
-               //lcd_putc('+');
+               lcd_gotoxy(19,0);
+               lcd_putc('+');
                //lcd_gotoxy(14,0);
                //lcd_puthex(spi_rxbuffer[0]);
                //OSZI_B_HI;
                setSPI_Teensy();
-               //lcd_gotoxy(16,0);
-               //lcd_puthex(spi_rxbuffer[0]);
+               
+               
+               if (OHNE_TEENSY)
+               {
+                  //spi_txbuffer[0] = 0x81;
+                  //spi_txbuffer[1] = 0x81;
+                 // spi_txbuffer[2] = 5;
+                  //spi_txbuffer[3] = 3;
+               }
+
+               
+               lcd_gotoxy(16,0);
+               lcd_puthex(spi_rxbuffer[0]);
+               //lcd_gotoxy(16,1);
+               //lcd_puthex(spi_rxbuffer[1]);
+               //lcd_puthex(errloop);
                
                teensycode = (spi_rxbuffer[0] & 0x07);    //Bit 7 ist SPI_RUN
                spi_rxbuffer[0] &=  ~(0x7F);
-               
+               //ext_spannung = (spi_rxbuffer[1] | (spi_rxbuffer[2]<<8));
                
                switch (teensycode)
                {
@@ -620,8 +656,7 @@ int main (void)
                   {
                      errloop++;
                      cli();
-                     ext_spannung = (spi_rxbuffer[1] | (spi_rxbuffer[2]<<8));
-                     
+                     ext_spannung = (spi_rxbuffer[1] | (spi_rxbuffer[2]<<8));                     
                      soll_spannung = (spi_rxbuffer[1] | (spi_rxbuffer[2]<<8));
                      sei();
                   }break;
@@ -636,41 +671,53 @@ int main (void)
                      
                }// switch
                spi_rxbuffer[0] &=  ~0x7F;
+               //OSZI_B_HI;
             }
             else
             {
-               // lcd_gotoxy(19,0);
-               //lcd_putc('-');
+               lcd_gotoxy(19,0);
+               lcd_putc('-');
                //OSZI_B_HI;
                
             }
             //_delay_us(1);
-            //      OSZI_A_TOGG;
-            
-            
-            
-            //            setDAC_long(ext_spannung<<4);
-            //           setDAC_long(soll_spannung);
             _delay_us(1);
-            // getADC();
-            //        _delay_us(1);
-            //OSZI_B_LO;
-//            switch_in = getSwitch(); // 22us
-            //OSZI_B_HI;
+
+            //      switch_in = getSwitch(); // 22us
+            //      switch_in = get_SR(0);
+            //      switch_in = readRaw8Kanal(2);
             
+            
+            //OSZI_B_LO;
+            switch_in = ((SWITCH_PIN & 0x1C)>>2 );
+            lcd_gotoxy(0,0);
+            lcd_puthex(7-switch_in);
+            
+            // Test fuer SR HC595
+            
+            set_SR(soll_spannung & 0x00FF); //
+           
+            // Ausgaenge entsprechend Schalterstellung setzen
+            switch_out &= ~0x07; // reset der Schalterwerte
             switch (switch_in)
             {
-               case 0x01: // OFF
+               case 0x00: // OFF
                {
                   
+               }break;
+                  
+               case 0x01: //
+               {
+                  
+                  switch_out |= 0x01;
                }break;
                case 0x02: // 100mA
                {
-                  
+                  switch_out |= 0x01;
                }break;
                case 0x03: // 300mA
                {
-                  
+                  switch_out |= 0x01;
                }break;
                case 0x04: // 1A
                {
@@ -684,52 +731,56 @@ int main (void)
                {
                   
                }break;
+                  
             }// switch
-            
+            //OSZI_B_HI;
+
             //_delay_us(100);
             //spi_adc_restore();
 #pragma mark ADC
+             
+            OSZI_A_LO;;
+            //_delay_us(1);
+            OSZI_A_HI;
+            //_delay_us(1);
             
-           /*
-            uint16_t a = ist_spannung=MCP3208_spiRead(SingleEnd,0);
-            _delay_us(1);
-            uint16_t b = MCP3208_spiRead(SingleEnd,1) ;
+            //OSZI_B_LO;
             
-            lcd_gotoxy(0,0);
-            lcd_putc('i');
-            lcd_putint12(a);
-            //lcd_putc(' ');
-            lcd_putc('s');
-            lcd_putint12(b);
-*/
+  //         setDAC7612(soll_spannung); // hier ODER in Control_loop
             
+            // Spannung messen
+            //OSZI_B_HI;
             ist_spannung= MCP3208_spiRead(SingleEnd,0);
-            _delay_us(1);
+            //_delay_us(1);
+            
+            // Strom messen
             ist_strom =  MCP3208_spiRead(SingleEnd,1) ;
-            lcd_gotoxy(6,0);
+            
+            /*
+             lcd_gotoxy(6,0);
             lcd_putint12(soll_spannung);
-
-            if (TEST)
+*/
+            /*
+            if (TEST == 1)
             {
             lcd_gotoxy(6,0);
-            lcd_putc('i');
+            //lcd_putc('i');
             lcd_putint12(ist_spannung);
-            lcd_putc(' ');
-            lcd_putc('s');
+            //lcd_putc(' ');
+            //lcd_putc('s');
             lcd_putint12(soll_spannung);
-            
+            }
            
-            
+            if (TEST == 2)
+            {
             lcd_gotoxy(6,1);
             lcd_putc('i');
             lcd_putint12(ist_strom);
             lcd_putc(' ');
             lcd_putc('s');
             lcd_putint12(soll_strom);
-
-               
-               
             }
+             */
            // ist_strom =  0;
             
             /*
@@ -791,7 +842,9 @@ int main (void)
             
 #pragma mark control_loop
             //OSZI_B_LO;
+            
             control_loop(); //2.5us
+            
             //OSZI_B_HI;
             //lcd_puthex(currentcontrol);
             
@@ -803,6 +856,49 @@ int main (void)
       {
          updateOK &= ~(1<<UPDATE_DISP);
          //setDAC_long(ext_spannung<<4);
+         
+         switch (TEST)
+         {
+         case 1: // nur Spannung
+            {
+               lcd_gotoxy(6,0);
+               //lcd_putc('i');
+               lcd_putint12(ist_spannung);
+               //lcd_putc(' ');
+               //lcd_putc('s');
+               lcd_putint12(soll_spannung);
+            }break;
+ 
+         case 2: // nur Strom
+            {
+               
+               lcd_gotoxy(6,1);
+               lcd_putc('i');
+               lcd_putint12(ist_strom);
+               lcd_putc(' ');
+               lcd_putc('s');
+               lcd_putint12(soll_strom);
+            }break;
+
+         case 3:
+            {
+               lcd_gotoxy(6,0);
+               //lcd_putc('i');
+               lcd_putint12(ist_spannung);
+               //lcd_putc(' ');
+               //lcd_putc('s');
+               lcd_putint12(soll_spannung);
+
+               
+               lcd_gotoxy(6,1);
+               lcd_putc('i');
+               lcd_putint12(ist_strom);
+               lcd_putc(' ');
+               lcd_putc('s');
+               lcd_putint12(soll_strom);
+            }break;
+         } // switch
+
          /*
          lcd_gotoxy(0,0);
          lcd_putc('L');
@@ -833,19 +929,19 @@ int main (void)
          // Strom
    //      lcd_putint12(ext_strom);
          
-         /*
-         lcd_gotoxy(5,1);
+         
+         lcd_gotoxy(4,1);
          lcd_putc('e');
          lcd_putint12(ext_spannung);
  
          lcd_gotoxy(10,1);
          lcd_putc('i');
          lcd_putint12(ist_spannung);
-         lcd_putc('s');
-         lcd_putint12(soll_spannung>>4); // 12 bit
-                  lcd_gotoxy(18,0);
-         lcd_puthex(errloop);
-          */
+         //lcd_putc('s');
+         //lcd_putint12(soll_spannung); // 12 bit
+         //lcd_gotoxy(18,0);
+         //lcd_puthex(errloop);
+         
 
       }
       
@@ -879,7 +975,7 @@ int main (void)
 		/* ******************** */
       if (TASTATUR_ON)
       {
-		initADC(TASTATURPIN);
+		initADC();
 		Tastenwert=(readKanal(TASTATURPIN)>>2);
 		
 //		lcd_gotoxy(3,1);

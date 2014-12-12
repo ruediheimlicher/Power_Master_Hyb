@@ -151,10 +151,12 @@ lcd_load_byte(uint8_t out_byte)
                 out_byte = out_byte << 1;
                 
                 /* pulse the the shift register clock */
-                LCD_PORT |= _BV(LCD_CLOCK_PIN);	
-				_delay_us(40);
+                LCD_PORT |= _BV(LCD_CLOCK_PIN);
+           
+           //_delay_us(40);
+				_delay_us(1);
 				//Clk des Schieberegisters
-                LCD_PORT &= ~_BV(LCD_CLOCK_PIN);
+            LCD_PORT &= ~_BV(LCD_CLOCK_PIN);
         }
 }
 
@@ -167,8 +169,10 @@ lcd_send_cmd(void)
 {
         /* Data in '164 is a command, so RS must be low (0) */
         LCD_PORT &= ~_BV(LCD_RSDS_PIN); 
-        lcd_strobe_E();	
-        _delay_us(50);
+        lcd_strobe_E();
+   
+        //_delay_us(50);
+         _delay_us(1);
 }
 
 /*
@@ -181,7 +185,8 @@ lcd_send_char(void)
         /* Data in '164 is a character, so RS must be high (1) */
         LCD_PORT |= _BV(LCD_RSDS_PIN); 
         lcd_strobe_E();
-        _delay_us(50);
+        //_delay_us(50);
+      _delay_us(1);
 }
 
 /*
@@ -314,16 +319,15 @@ void lcd_puts(const char *s)
 
 /*
  * Strobes the E signal on the LCD to "accept" the byte in the '164.  The RS
- * line determines wheter the byte is a character or a command.
+ * line determines whether the byte is a character or a command.
 */
 void
 lcd_strobe_E(void)
 {
-        /* strobe E signal */
-        LCD_PORT |= _BV(LCD_ENABLE_PIN);
-        _delay_us(450); 
-	//	lcddelay_ms(100);
-        LCD_PORT &= ~_BV(LCD_ENABLE_PIN);
+   /* strobe E signal */
+   LCD_PORT |= _BV(LCD_ENABLE_PIN);
+   _delay_us(20);
+   LCD_PORT &= ~_BV(LCD_ENABLE_PIN);
 }
 
 /*

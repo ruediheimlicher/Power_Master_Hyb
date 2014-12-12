@@ -41,6 +41,7 @@
 #define LCD_ENABLE_PIN          6
 #define LCD_CLOCK_PIN           7
 
+#define LCD_STROBEDELAY  2
 
 
 /* number of columns on the display */
@@ -84,6 +85,26 @@
 #ifndef F_CPU
 #define F_CPU 1000000UL  /* 1 MHz CPU clock */
 #endif
+
+volatile uint8_t lcd_delaycount=0;
+volatile uint8_t lcd_status=0;
+
+// OSZI
+#define OSZIPORT           PORTA
+#define OSZIPORTDDR        DDRA
+#define OSZIPORTPIN        PINA
+#define OSZI_PULS_A        0
+#define OSZI_PULS_B        1
+
+#define OSZI_A_LO OSZIPORT &= ~(1<<OSZI_PULS_A)
+#define OSZI_A_HI OSZIPORT |= (1<<OSZI_PULS_A)
+#define OSZI_A_TOGG OSZIPORT ^= (1<<OSZI_PULS_A)
+
+
+#define OSZI_B_LO OSZIPORT &= ~(1<<OSZI_PULS_B)
+#define OSZI_B_HI OSZIPORT |= (1<<OSZI_PULS_B)
+#define OSZI_B_TOGG OSZIPORT ^= (1<<OSZI_PULS_B)
+
 
 /* functions */
 void lcd_backlight(int);

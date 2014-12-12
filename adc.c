@@ -51,13 +51,12 @@ struct adcwert16 readKanal16Bit(uint8_t kanal)
    return tempWert;
 }
 
-void initADC(uint8_t derKanal)
+void initADC(void)
 {
-   ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0);    // Frequenzvorteiler auf 32 setzen und ADC aktivieren 
+   ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1);    // Frequenzvorteiler auf 64 setzen und ADC aktivieren
  
-  ADMUX = derKanal;                      // Ÿbergebenen Kanal waehlen
 
-	//ADMUX |= (1<<REFS1) | (1<<REFS0); // interne Referenzspannung nutzen 
+	ADMUX |= (1<<REFS1) | (1<<REFS0); // interne Referenzspannung 2.56V nutzen
   //if (test)
   {
   //ADMUX |= (1<<REFS0); // VCC als Referenzspannung nutzen 
@@ -78,7 +77,7 @@ uint16_t readKanal(uint8_t derKanal) //Unsere Funktion zum ADC-Channel aus lesen
   uint16_t result = 0;         //Initialisieren wichtig, da lokale Variablen
                                //nicht automatisch initialisiert werden und
                                //zufŠllige Werte haben. Sonst kann Quatsch rauskommen
- ADMUX = derKanal; 
+ ADMUX |= derKanal;
   // Eigentliche Messung - Mittelwert aus 4 aufeinanderfolgenden Wandlungen
   for(i=0;i<4;i++)
   {
@@ -95,6 +94,57 @@ uint16_t readKanal(uint8_t derKanal) //Unsere Funktion zum ADC-Channel aus lesen
  
   return result;
 }
+
+uint16_t readRawKanal(uint8_t derKanal) //Unsere Funktion zum ADC-Channel aus lesen
+{
+   uint8_t i;
+   uint16_t result = 0;
+   //Initialisieren wichtig, da lokale Variablen
+   //nicht automatisch initialisiert werden und
+   //zufŠllige Werte haben. Sonst kann Quatsch rauskommen
+
+   ADMUX |= derKanal;
+   // Eigentliche Messung - Mittelwert aus 4 aufeinanderfolgenden Wandlungen
+   
+      ADCSRA |= (1<<ADSC);            // eine Wandlung
+      while ( ADCSRA & (1<<ADSC) )
+      {
+         ;     // auf Abschluss der Wandlung warten
+      }
+      result = ADCW;            // Wandlungsergebnisse aufaddieren
+   
+   //  ADCSRA &= ~(1<<ADEN);             // ADC deaktivieren ("Enable-Bit" auf LOW setzen)
+   
+   
+   return result;
+}
+
+uint8_t readRaw8Kanal(uint8_t derKanal) //Unsere Funktion zum ADC-Channel aus lesen
+{
+   uint8_t i;
+   uint16_t result = 0;
+   //Initialisieren wichtig, da lokale Variablen
+   //nicht automatisch initialisiert werden und
+   //zufŠllige Werte haben. Sonst kann Quatsch rauskommen
+   
+   ADMUX |= derKanal;
+   // Eigentliche Messung - Mittelwert aus 4 aufeinanderfolgenden Wandlungen
+   
+   ADCSRA |= (1<<ADSC);            // eine Wandlung
+   while ( ADCSRA & (1<<ADSC) )
+   {
+      ;     // auf Abschluss der Wandlung warten
+   }
+   result = ADCL;            // Wandlungsergebnisse aufaddieren
+   
+   //  ADCSRA &= ~(1<<ADEN);             // ADC deaktivieren ("Enable-Bit" auf LOW setzen)
+   
+   
+   return result;
+}
+
+
+
 
 void closeADC()
 {
