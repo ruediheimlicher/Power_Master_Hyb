@@ -285,8 +285,8 @@ void rotary_init(void)
    PCMSK3|= (1<<PCINT24);
    //PCMSK2|= (1<<PCINT17);
    
-//   EICRA |= (1<<ISC01);
-//   EIMSK |= (1<<INTF0);
+ //  EICRA |= (1<<ISC01);
+ //  EIMSK |= (1<<INTF0);
 }
 
 
