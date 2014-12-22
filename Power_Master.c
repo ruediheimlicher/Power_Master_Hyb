@@ -284,6 +284,9 @@ void rotary_init(void)
    
    PCMSK3|= (1<<PCINT24);
    //PCMSK2|= (1<<PCINT17);
+   
+//   EICRA |= (1<<ISC01);
+//   EIMSK |= (1<<INTF0);
 }
 
 
@@ -352,6 +355,72 @@ ISR(PCINT3_vect)
    //OSZI_A_HI;
 }
 
+
+
+
+ISR(INT0_vect)
+{
+   //rot_eingang0++;
+   //OSZI_A_LO;
+   
+   uint8_t rot_pin0 = ROTARY_PIN & 0x01; //Eingang 0
+   uint8_t rot_pin1 = (ROTARY_PIN & 0x02); //Eingang 1
+   
+   new_rot_pin = ROTARY_PIN & 0x02;
+   
+   akt_rot_pin = new_rot_pin ^ old_rot_pin;
+   
+   uint16_t delta=0x2F;
+   //uint16_t deltaA=0x80;
+   
+   if (rot_pin1 == 0)
+   {
+      rot_control++;
+      if (rot_loopcount_H  > 0x08)
+      {
+         delta=0x02;
+         //deltaA = 0x08;
+      }
+      rot_loopcount_H=0;
+   }
+   //rot_control = rot_loopcount_H;
+   //deltaA = 10;
+   
+   
+   if ((rot_pin0==1) && (rot_pin1 == 0))
+   {
+      if (0x0FFF - soll_spannung > delta)
+      {
+         soll_spannung += delta;
+      }
+      else
+      {
+         soll_spannung = 0x0FFF;
+      }
+      
+   }
+   else if ((rot_pin0==0) && (rot_pin1 == 0))
+   {
+      if (soll_spannung > ROTARY_MIN + delta)
+      {
+         soll_spannung -= delta;
+         
+      }
+      else
+      {
+         soll_spannung = ROTARY_MIN;
+      }
+   }
+   
+   
+   
+   
+   // soll_spannung = rot_eingang_A;
+   spi_txbuffer[2] =  (soll_spannung & 0x00FF);
+   spi_txbuffer[3] = ((soll_spannung & 0xFF00)>>8);
+   
+   //OSZI_A_HI;
+}
 
 
 void timer0 (void) // Grundtakt fuer Stoppuhren usw.
@@ -576,13 +645,15 @@ int main (void)
    
    //spistatus |= (1<< TEENSY_SEND);
    
-   soll_spannung = 400;
+   soll_spannung = 1000;
    currentcontrol=1; // 0=voltage control, 1 current control
    //lcd_gotoxy(6,0);
    //lcd_putsignedint(-12);
    soll_strom = 800;
    
-   
+   uint16_t teststrom = 0;
+   uint16_t teststrom_mittel[4]={};
+   uint8_t stromschleifecounter=0;
 #pragma mark while
 	while (1)
 	{
@@ -689,16 +760,16 @@ int main (void)
             
             
             //OSZI_B_LO;
-            switch_in = ((SWITCH_PIN & 0x1C)>>2 );
+            switch_in = 7-((SWITCH_PIN & 0x1C)>>2 );
             lcd_gotoxy(0,0);
-            lcd_puthex(7-switch_in);
+            lcd_puthex(switch_in);
             
             // Test fuer SR HC595
             
-            set_SR(soll_spannung & 0x00FF); //
+           
            
             // Ausgaenge entsprechend Schalterstellung setzen
-            switch_out &= ~0x07; // reset der Schalterwerte
+            switch_out = 0xFF; // reset der Schalterwerte, alle HI: Messung ueberbruecken
             switch (switch_in)
             {
                case 0x00: // OFF
@@ -706,18 +777,19 @@ int main (void)
                   
                }break;
                   
-               case 0x01: //
+               case 0x01: //100mA
                {
                   
-                  switch_out |= 0x01;
+                  switch_out &= ~(1<<0);
+                  
                }break;
-               case 0x02: // 100mA
+               case 0x02: //
                {
-                  switch_out |= 0x01;
+                  switch_out &= ~(1<<1);
                }break;
                case 0x03: // 300mA
                {
-                  switch_out |= 0x01;
+                  switch_out &= ~(1<<2);
                }break;
                case 0x04: // 1A
                {
@@ -734,14 +806,16 @@ int main (void)
                   
             }// switch
             //OSZI_B_HI;
-
+            
+            //lcd_puthex(switch_out);
+            set_SR(switch_out); //
             //_delay_us(100);
             //spi_adc_restore();
 #pragma mark ADC
              
-            OSZI_A_LO;;
+//            OSZI_A_LO;
             //_delay_us(1);
-            OSZI_A_HI;
+ //           OSZI_A_HI;
             //_delay_us(1);
             
             //OSZI_B_LO;
@@ -754,8 +828,25 @@ int main (void)
             //_delay_us(1);
             
             // Strom messen
-            ist_strom =  MCP3208_spiRead(SingleEnd,1) ;
-            
+            if (switch_in)
+            {
+               uint16_t teststrom = MCP3208_spiRead(SingleEnd,(switch_in)) ;
+               stromschleifecounter &= 0x03;
+               teststrom_mittel[stromschleifecounter] = MCP3208_spiRead(SingleEnd,(switch_in)) ;
+               stromschleifecounter++;
+               uint8_t index=0;
+               teststrom=0;
+               for (index=0;index<4;index++)
+               {
+                  teststrom += (teststrom_mittel[index]);
+               }
+               teststrom /= 4;
+               //         ist_strom =  MCP3208_spiRead(SingleEnd,(switch_out & 0x07)) ;
+               
+               lcd_gotoxy(16,1);
+               // lcd_putc('i');
+               lcd_putint12( teststrom);
+            }
             /*
              lcd_gotoxy(6,0);
             lcd_putint12(soll_spannung);
@@ -841,11 +932,11 @@ int main (void)
             //           lcd_putint12(dac_val);
             
 #pragma mark control_loop
-            //OSZI_B_LO;
+            OSZI_B_LO;
             
             control_loop(); //2.5us
             
-            //OSZI_B_HI;
+            OSZI_B_HI;
             //lcd_puthex(currentcontrol);
             
             
