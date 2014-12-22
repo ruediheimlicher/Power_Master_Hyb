@@ -288,6 +288,8 @@ void rotary_init(void)
  //  EICRA |= (1<<ISC01);
  //  EIMSK |= (1<<INTF0);
    
+   
+   
 }
 
 
