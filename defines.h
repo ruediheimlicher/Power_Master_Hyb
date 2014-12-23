@@ -26,8 +26,12 @@
 #define ROTARY_PORT          PORTD
 #define ROTARY_DDR           DDRD
 #define ROTARY_PIN            PIND
-#define ROTARY_PIN0           0
-#define ROTARY_PIN1           1
+#define ROTARY_A_PIN0         2
+#define ROTARY_A_PIN1          0
+#define ROTARY_B_PIN0         3
+#define ROTARY_B_PIN1          1
+
+
 
 #define ROTARY_MIN             200
 

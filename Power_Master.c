@@ -272,11 +272,13 @@ void device_init(void)
 
 void rotary_init(void)
 {
-   ROTARY_DDR &= ~(1<<ROTARY_PIN0);   // Eingang 0
-   ROTARY_PORT |= (1<<ROTARY_PIN0); // HI
-   ROTARY_DDR &= ~(1<<ROTARY_PIN0); //Eingang 1
-   ROTARY_PORT |= (1<<ROTARY_PIN1);
+   /*
+   ROTARY_DDR &= ~(1<<ROTARY_A_PIN0);   // Eingang 0
+   ROTARY_PORT |= (1<<ROTARY_A_PIN0); // HI
+   ROTARY_DDR &= ~(1<<ROTARY_A_PIN1); //Eingang 1
+   ROTARY_PORT |= (1<<ROTARY_A_PIN1);
    
+  
    // PCINT16/RXD PD0
    PCICR |= (1<<PCIE3);
   
@@ -284,16 +286,35 @@ void rotary_init(void)
    
    PCMSK3|= (1<<PCINT24);
    //PCMSK2|= (1<<PCINT17);
-   
- //  EICRA |= (1<<ISC01);
- //  EIMSK |= (1<<INTF0);
+   */
    
    
    
+   EICRA |= (1<<ISC01);
+   EIMSK |= (1<<INTF0);
+   
+   // Rotary A
+   ROTARY_DDR &= ~(1<<ROTARY_A_PIN0);  // Interrupt-Eingang INT0
+   ROTARY_PORT |= (1<<ROTARY_A_PIN0);  // HI
+   ROTARY_DDR &= ~(1<<ROTARY_A_PIN1);  // Sense-Eingang
+   ROTARY_PORT |= (1<<ROTARY_A_PIN1);
+   
+   // Rotary B
+   ROTARY_DDR &= ~(1<<ROTARY_B_PIN0);  // Interrupt-Eingang INT1
+   ROTARY_PORT |= (1<<ROTARY_B_PIN0);
+   ROTARY_DDR &= ~(1<<ROTARY_B_PIN1);  // Sense-Eingang
+   ROTARY_PORT |= (1<<ROTARY_B_PIN1);
+
+   /*
+#define ROTARY_A_PIN0         2
+#define ROTARY_A_PIN1          0
+#define ROTARY_B_PIN0         3
+#define ROTARY_B_PIN1          1
+*/
 }
 
 
-
+/*
 ISR(PCINT3_vect)
 {
    //rot_eingang0++;
@@ -319,7 +340,6 @@ ISR(PCINT3_vect)
       }
       rot_loopcount_H=0;
    }
-   //rot_control = rot_loopcount_H;
    //deltaA = 10;
    
    
@@ -355,34 +375,35 @@ ISR(PCINT3_vect)
    spi_txbuffer[2] =  (soll_spannung & 0x00FF);
    spi_txbuffer[3] = ((soll_spannung & 0xFF00)>>8);
    
-   //OSZI_A_HI;
+  // OSZI_A_HI;
 }
-
+*/
 
 
 
 ISR(INT0_vect)
 {
    //rot_eingang0++;
-   //OSZI_A_LO;
+   OSZI_A_LO;
    
-   uint8_t rot_pin0 = ROTARY_PIN & 0x01; //Eingang 0
-   uint8_t rot_pin1 = (ROTARY_PIN & 0x02); //Eingang 1
+   //uint8_t rot_pin0 = ROTARY_PIN & 0x04; // Interrupt-Eingang
+   uint8_t rot_pin1 = (ROTARY_PIN & (1<<ROTARY_A_PIN1)); // Sense Eingang A
    
-   new_rot_pin = ROTARY_PIN & 0x02;
+  // new_rot_pin = ROTARY_PIN & 0x02;
    
-   akt_rot_pin = new_rot_pin ^ old_rot_pin;
+  // akt_rot_pin = new_rot_pin ^ old_rot_pin;
    
    uint16_t delta=0x2F;
    //uint16_t deltaA=0x80;
    
-   if (rot_pin1 == 0)
+  // if (rot_pin1 == 0)
    {
       rot_control++;
       if (rot_loopcount_H  > 0x08)
       {
          delta=0x02;
          //deltaA = 0x08;
+         
       }
       rot_loopcount_H=0;
    }
@@ -390,9 +411,9 @@ ISR(INT0_vect)
    //deltaA = 10;
    
    
-   if ((rot_pin0==1) && (rot_pin1 == 0))
+   if ( (rot_pin1 == 0))
    {
-      if (0x0FFF - soll_spannung > delta)
+      if (0x0FFF - soll_spannung > delta) // noch nicht auf Max?
       {
          soll_spannung += delta;
       }
@@ -402,12 +423,11 @@ ISR(INT0_vect)
       }
       
    }
-   else if ((rot_pin0==0) && (rot_pin1 == 0))
+   else
    {
-      if (soll_spannung > ROTARY_MIN + delta)
+      if (soll_spannung > ROTARY_MIN + delta) // noch genuegend?
       {
          soll_spannung -= delta;
-         
       }
       else
       {
@@ -415,14 +435,11 @@ ISR(INT0_vect)
       }
    }
    
-   
-   
-   
-   // soll_spannung = rot_eingang_A;
+   // soll_spannung an Teensy
    spi_txbuffer[2] =  (soll_spannung & 0x00FF);
    spi_txbuffer[3] = ((soll_spannung & 0xFF00)>>8);
    
-   //OSZI_A_HI;
+   OSZI_A_HI;
 }
 
 
