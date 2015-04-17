@@ -51,6 +51,23 @@
 #define SPI_SLAVE_READ  0x01
 
 
+// DAC MCP8421
+#define MCP_PORT  PORTC
+#define MCP_DDR   DDRC
+#define MCP_DAC_U_CS 6
+#define MCP_DAC_I_CS 7
+
+#define MCP_U_CS_HI        MCP_PORT |= (1<<MCP_DAC_U_CS)
+#define MCP_U_CS_LO        MCP_PORT &= ~(1<<MCP_DAC_U_CS)
+
+
+#define MCP_LOAD_PORT PORTA
+#define MCP_LOAD_DDR  DDRA
+#define MCP_LOAD  4
+
+#define MCP_LOAD_HI        MCP_LOAD_PORT |= (1<<MCP_LOAD)
+#define MCP_LOAD_LO        MCP_LOAD_PORT &= ~(1<<MCP_LOAD)
+
 volatile uint8_t spi_rxbuffer[SPI_BUFFERSIZE];
 volatile uint8_t spi_txbuffer[SPI_BUFFERSIZE];
 

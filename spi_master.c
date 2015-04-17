@@ -119,6 +119,17 @@ void spi_master_init (void)
    status = SPSR0;								//Status loeschen
    SPI_DDR |= (1<<(SPI_CS_ADC));
    
+   
+   // MCP8421
+   MCP_DDR |= (1<<MCP_DAC_U_CS); // Chip select
+   MCP_PORT |= (1<<MCP_DAC_U_CS); // HI,
+
+   MCP_DDR |= (1<<MCP_DAC_I_CS); // Chip select
+   MCP_PORT |= (1<<MCP_DAC_I_CS); // HI,
+
+   MCP_LOAD_DDR |= (1<<MCP_LOAD); // LOAD Data
+   MCP_LOAD_PORT |= (1<<MCP_LOAD); // HI
+   
 }
 
 void spi_master_restore(void)
@@ -490,6 +501,42 @@ uint8_t set_SR_23S17_B(uint8_t outData)
    SRA_CS_HI;
    
    return SPDR0;
+   
+   
+}
+
+void setDAC_U(uint16_t data)
+{
+   MCP_U_CS_LO;
+   //MCP_PORT &= ~(1<<MCP_DAC_U_CS);
+   _delay_us(1);
+   uint8_t hbyte = (((data & 0xFF00)>>8) & 0x0F); // bit 8-11 von data als bit 0-3
+   
+   hbyte |= 0x30; // Gain 1
+   //hbyte |= 0x10; // Gain 2
+   //hbyte = 0b00010000;
+   SPDR0 = (hbyte);
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+
+   SPDR0 = (data & 0x00FF);
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+   _delay_us(1);
+   
+   //
+   MCP_U_CS_HI;
+   //MCP_PORT &= (1<<MCP_DAC_U_CS);
+   _delay_us(1);
+   
+   // Daten laden
+   MCP_LOAD_LO;
+   _delay_us(1);
+   MCP_LOAD_HI;
    
    
 }

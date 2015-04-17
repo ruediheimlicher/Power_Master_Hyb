@@ -749,7 +749,7 @@ int main (void)
   // i2c_init();
    spi_master_init();
    
-   dac_init();
+   //dac_init();
    
    uint16_t spiloop =0;
    uint8_t twiloop=0;
@@ -1190,6 +1190,9 @@ int main (void)
          
          update_BCD_Array(BCD_Array,mittelspannung);
          
+         
+         // DAC U
+         setDAC_U(seg_loop<<4);
          
          
          /*
