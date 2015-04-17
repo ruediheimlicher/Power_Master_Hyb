@@ -13,3 +13,8 @@ Images.*
 build/
 run*
 .dep/
+TWI*
+i2c*
+twi*
+AVR_Starter*
+Makefile
