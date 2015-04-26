@@ -152,7 +152,7 @@ volatile uint8_t in_L=0;
 volatile uint8_t ledcounter=0;
 
 // 7-Segment
-volatile uint8_t seg_loop=0;
+volatile uint16_t seg_loop=0;
 
 
 //volatile uint8_t out[8] = {'H','e','l','l','o',' ',' ',' '};
@@ -719,8 +719,10 @@ int main (void)
    //JTAG deaktivieren (datasheet 231)
    MCUCR |=(1<<7);
    MCUCR |=(1<<7);
+   MCUCR |=(1<<7);
+   MCUCR |=(1<<7);
    
-   uint8_t ch = MCUSR;
+   //uint8_t ch = MCUSR;
    MCUSR = 0;
    cli();
    wdt_disable();
@@ -732,7 +734,8 @@ int main (void)
    WDTCSR = 0x00;
 
    // Fuses: h: D9	l: EF  JTAG OFF
-	device_init();
+	
+   device_init();
 	
 	lcd_initialize(LCD_FUNCTION_8x2, LCD_CMD_ENTRY_INC, LCD_CMD_ON);
 	lcd_puts("Guten Tag\0");
@@ -1180,6 +1183,17 @@ int main (void)
          
          set_SR_23S17_B(seg_loop);
          
+         
+         lcd_gotoxy(0,3);
+         lcd_putint12(seg_loop);
+         ledcounter++;
+         
+         
+         uint8_t a = get_SR_23S17(GPIOB);
+         lcd_gotoxy(6,3);
+         lcd_puthex(a & 0xF0);
+
+         
          uint8_t index=0;
          uint32_t mittelspannung = 0;
          for (index=0;index<16;index++)
@@ -1192,8 +1206,11 @@ int main (void)
          
          
          // DAC U
-         setDAC_U(seg_loop<<4);
+         setDAC_U((seg_loop<<6));
+         _delay_ms(1);
          
+         setMCP4821_I(8*seg_loop);
+
          
          /*
           lcd_gotoxy(0,2);
@@ -1207,7 +1224,7 @@ int main (void)
           */
          
          
- //        seg_loop &= 0x07;
+    //     seg_loop &= 0xFF;
          
          if (seg_loop == 0)
          {
@@ -1220,22 +1237,24 @@ int main (void)
           BCD_Array[2]=4;
           BCD_Array[3]=6;
           */
-         uint8_t seg_data = ((BCD_Array[seg_loop] & 0x0F));
+         uint8_t seg_data = ((BCD_Array[(seg_loop & 0x07)] & 0x0F));
          //uint8_t seg_data = 3;//((BCD_Array[1] & 0x0F));
          
-         seg_data |= (1<<(seg_loop+4));
+         lcd_gotoxy(10,3);
+         lcd_putint12(BCD_Array[(seg_loop & 0x07)]);
+         lcd_putc(' ');
+         
+         
+         lcd_puthex(seg_data);
+         
+         seg_data |= (1<<((seg_loop & 0x07)+4));
          
          //   seg_data = 13;
-         // lcd_gotoxy(0,3);
-         // lcd_puthex(seg_data);
          
          //set_SR_7Seg(BCD_Array[seg_loop & 0x03]);
 //        set_SR_7Seg(seg_data);
         
         
-         lcd_gotoxy(0,2);
-         lcd_putint(ledcounter);
-         ledcounter++;
          OSZI_A_HI;
       }//if UPDATE_7SEG_SR
 

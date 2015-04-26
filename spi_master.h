@@ -60,6 +60,9 @@
 #define MCP_U_CS_HI        MCP_PORT |= (1<<MCP_DAC_U_CS)
 #define MCP_U_CS_LO        MCP_PORT &= ~(1<<MCP_DAC_U_CS)
 
+#define MCP_I_CS_HI        MCP_PORT |= (1<<MCP_DAC_I_CS)
+#define MCP_I_CS_LO        MCP_PORT &= ~(1<<MCP_DAC_I_CS)
+
 
 #define MCP_LOAD_PORT PORTA
 #define MCP_LOAD_DDR  DDRA

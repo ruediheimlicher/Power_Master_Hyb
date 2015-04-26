@@ -24,14 +24,14 @@
 //#define SOFT_SWITCH_LOAD   2
 
 //  !!! PIN's in neuem Layout verändert !!!
-#define SOFT_DAC_LOAD      4 // war 3 
+#define SOFT_DAC_LOAD      1 // war 3 
 #define SOFT_DAC_CS        3 // war 4
 
 
 
-#define SOFT_MOSI          5
-#define SOFT_MISO          6
-#define SOFT_SCK           7
+#define SOFT_MOSI          2
+#define SOFT_MISO         4
+#define SOFT_SCK           0
 
 
 

@@ -435,8 +435,8 @@ void init_SR_23S17(void)
    SPI_Write(IOCONA,0x28);   // I/O Control Register: BANK=0, SEQOP=1, HAEN=1 (Enable Addressing)
    //SPI_Write(IODIRA,0x00);   // GPIOA As Output
    //SPI_Write(IODIRB,0x00);   // GPIOB As Input
-   //SPI_Write(GPPUB,0x00);    // Enable Pull-up Resistor on GPIOB
-   //SPI_Write(GPIOA,0x00);    // Reset Output on GPIOA
+   SPI_Write(GPPUB,0xF0);    // Enable Pull-up Resistor on GPIOB
+   SPI_Write(GPIOA,0x00);    // Reset Output on GPIOA
    
 
    
@@ -505,6 +505,39 @@ uint8_t set_SR_23S17_B(uint8_t outData)
    
 }
 
+uint8_t get_SR_23S17(uint8_t addr)
+{
+   uint8_t read_opcode = 0x41; // 0x40 & read
+   uint8_t read_adresse = 0x13; // GPIOB PIN-OUT/IN
+
+   // Activate the CS pin
+   SRA_CS_LO;
+   // Start MCP23S17 OpCode transmission
+   //SPDR = SPI_SLAVE_ID | ((SPI_SLAVE_ADDR << 1) & 0x0E)| SPI_SLAVE_READ;
+   _delay_us(1);
+   spiwaitcounter=0;
+   SPDR0 = read_opcode;
+
+   // Wait for transmission complete
+   while(!(SPSR0 & (1<<SPIF0)));
+   _delay_us(1);
+   // Start MCP23S17 Address transmission
+   SPDR0 = addr;
+   // Wait for transmission complete
+   while(!(SPSR0 & (1<<SPIF0)));
+   
+   _delay_us(1);
+   // Send Dummy transmission for reading the data
+   SPDR0 = 0x00;
+   // Wait for transmission complete
+   while(!(SPSR0 & (1<<SPIF0)));
+   
+   // CS pin is not active
+   SRA_CS_HI;
+   return(SPDR0);
+}
+
+
 void setDAC_U(uint16_t data)
 {
    MCP_U_CS_LO;
@@ -541,4 +574,39 @@ void setDAC_U(uint16_t data)
    
 }
 
+void setMCP4821_I(uint16_t data)
+{
+   MCP_I_CS_LO;
+   //MCP_PORT &= ~(1<<MCP_DAC_U_CS);
+   _delay_us(1);
+   uint8_t hbyte = (((data & 0xFF00)>>8) & 0x0F); // bit 8-11 von data als bit 0-3
+   
+   hbyte |= 0x30; // Gain 1
+   //hbyte |= 0x10; // Gain 2
+   //hbyte = 0b00010000;
+   SPDR0 = (hbyte);
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+   
+   SPDR0 = (data & 0x00FF);
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+   _delay_us(1);
+   
+   //
+   MCP_I_CS_HI;
+   //MCP_PORT &= (1<<MCP_DAC_U_CS);
+   _delay_us(1);
+   
+   // Daten laden
+   MCP_LOAD_LO;
+   _delay_us(1);
+   MCP_LOAD_HI;
+   
+   
+}
 

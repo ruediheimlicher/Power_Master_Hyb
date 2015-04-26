@@ -54,8 +54,8 @@ void dac_init(void)
    SOFT_SPI_PORT &= ~(1<<SOFT_DAC_LOAD); // LO
    
    
-   SOFT_SPI_DDR &= ~(1<<SOFT_MISO); // Eingang fuer MISO ADC
-   SOFT_SPI_PORT |= (1<<SOFT_MISO); // HI
+   //SOFT_SPI_DDR &= ~(1<<SOFT_MISO); // Eingang fuer MISO ADC
+   //SOFT_SPI_PORT |= (1<<SOFT_MISO); // HI
 
 }
 
