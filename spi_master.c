@@ -505,6 +505,37 @@ uint8_t set_SR_23S17_B(uint8_t outData)
    
 }
 
+uint8_t set_SR_23S17(uint8_t addr, uint8_t outData)
+{
+   uint8_t write_opcode = 0x40; // 0x40 & write
+   uint8_t write_adresse = 0x13; // GPIOB PIN-OUT/IN
+   //uint8_t write_adresse = 0x15; // OLATB PIN-OUT/IN
+   uint8_t write_dataA = outData; // alle output
+   SRA_CS_LO;
+   _delay_us(1);
+   spiwaitcounter=0;
+   SPDR0 = write_opcode;
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+   SPDR0 = addr;
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+   SPDR0 = write_dataA;
+   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
+   {
+      spiwaitcounter++;
+   }
+   SRA_CS_HI;
+   
+   return SPDR0;
+   
+   
+}
+
 uint8_t get_SR_23S17(uint8_t addr)
 {
    uint8_t read_opcode = 0x41; // 0x40 & read

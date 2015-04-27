@@ -262,6 +262,8 @@ void device_init(void)
    OSZIPORTDDR |= (1<<OSZI_PULS_B);		//Pin 1 von  als Ausgang fuer LED TWI
    OSZIPORT |= (1<<OSZI_PULS_B);		//Pin   von   als Ausgang fuer OSZI
 	
+   /*
+    // verlegt auf Schieberegister
    SWITCH_DDR &= ~(1<< SWITCH_0); // Eingang Switch Bit 0
    SWITCH_DDR &= ~(1<< SWITCH_1); // Eingang Switch Bit 1
    SWITCH_DDR &= ~(1<< SWITCH_2); // Eingang Switch Bit 2
@@ -269,7 +271,7 @@ void device_init(void)
    SWITCH_PORT  |= (1<< SWITCH_0); // Eingang Switch Bit 0
    SWITCH_PORT  |= (1<< SWITCH_1); // Eingang Switch Bit 1
    SWITCH_PORT  |= (1<< SWITCH_2); // Eingang Switch Bit 2
-   
+   */
    
    // Schieberegister Strom-Shunt
    SPI_SR_DDR |= (1<< SRA_CS); // Ausgang CS
@@ -580,7 +582,7 @@ ISR (TIMER0_OVF_vect)
 
 void timer1(void)
 {
-   DDRD = 0x30;                      // Set Port D4 and D5 as Output
+   DDRD |= 0x30;                      // Set Port D4 and D5 as Output
    
    TCCR1A |= (1<<WGM11); //
    TCCR1A |= (1<<COM1A1) |(1<<COM1B1);   // Set up the two Control registers of Timer1.
@@ -787,8 +789,9 @@ int main (void)
    soll_strom = 800;
    
    
-   timer1();
    
+   
+   timer1();
    
    uint16_t spannung_mittel[16]={};
    uint8_t spannungschleifecounter=0;
@@ -834,6 +837,7 @@ int main (void)
    };
 
    
+
    
 #pragma mark while
 	while (1)
@@ -871,14 +875,14 @@ int main (void)
             //OSZI_B_HI;
             // if (ADMIN_PIN & (1<<TEENSY_DETECTED))
             
-         //   spistatus |= (1<< TEENSY_RECV);
+            //   spistatus |= (1<< TEENSY_RECV);
             
             if (spistatus & (1<< TEENSY_RECV)) // Teensy ist da, abfragen
             {
                if (TEST)
                {
-               lcd_gotoxy(19,0);
-               lcd_putc('+');
+                  lcd_gotoxy(19,0);
+                  lcd_putc('+');
                }
                //lcd_gotoxy(14,0);
                //lcd_puthex(spi_rxbuffer[0]);
@@ -890,13 +894,13 @@ int main (void)
                {
                   //spi_txbuffer[0] = 0x81;
                   //spi_txbuffer[1] = 0x81;
-                 // spi_txbuffer[2] = 5;
+                  // spi_txbuffer[2] = 5;
                   //spi_txbuffer[3] = 3;
                }
-
                
-    //           lcd_gotoxy(15,0);
-    //           lcd_puthex(spi_rxbuffer[0]);
+               
+               //           lcd_gotoxy(15,0);
+               //           lcd_puthex(spi_rxbuffer[0]);
                //lcd_gotoxy(16,1);
                //lcd_puthex(spi_rxbuffer[1]);
                //lcd_puthex(errloop);
@@ -911,7 +915,7 @@ int main (void)
                   {
                      errloop++;
                      cli();
-                     ext_spannung = (spi_rxbuffer[1] | (spi_rxbuffer[2]<<8));                     
+                     ext_spannung = (spi_rxbuffer[1] | (spi_rxbuffer[2]<<8));
                      soll_spannung = (spi_rxbuffer[1] | (spi_rxbuffer[2]<<8));
                      sei();
                   }break;
@@ -1037,6 +1041,7 @@ int main (void)
             
      //      setDAC7612(soll_spannung); // hier ODER in Control_loop
             
+            
             // Spannung messen
             //OSZI_B_HI;
             ist_spannung= MCP3208_spiRead(SingleEnd,3);
@@ -1082,14 +1087,14 @@ int main (void)
              lcd_gotoxy(6,0);
             lcd_putint12(soll_spannung);
 */
-            /*
+            
             if (TEST == 1)
             {
             lcd_gotoxy(6,0);
-            //lcd_putc('i');
+            lcd_putc('i');
             lcd_putint12(ist_spannung);
-            //lcd_putc(' ');
-            //lcd_putc('s');
+            lcd_putc(' ');
+            lcd_putc('s');
             lcd_putint12(soll_spannung);
             }
            
@@ -1102,7 +1107,7 @@ int main (void)
             lcd_putc('s');
             lcd_putint12(soll_strom);
             }
-             */
+            
            // ist_strom =  0;
             
             /*
@@ -1385,6 +1390,7 @@ int main (void)
          //OSZI_B_LO;
          //loopCount2++;
 			//OSZI_A_LO;
+         //LOOPLED_DDR	|= (1<<LOOPLED_PIN);
 			LOOPLED_PORT ^= (1<<LOOPLED_PIN);
          
          /*
