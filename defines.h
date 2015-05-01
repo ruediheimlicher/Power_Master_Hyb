@@ -9,7 +9,7 @@ avrdude: safemode: lfuse reads as c2
 avrdude: safemode: hfuse reads as D9
 avrdude: safemode: efuse reads as FF
 */
-#define TEST 1
+#define TEST 0
 
 #define OHNE_TEENSY 1
 
@@ -42,7 +42,7 @@ avrdude: safemode: efuse reads as FF
 
 
 
-#define ROTARY_A_MIN            200 // Spannung
+#define ROTARY_A_MIN            60 // Spannung
 #define ROTARY_B_MIN            100 // Strom
 
 // admin
@@ -50,6 +50,8 @@ avrdude: safemode: efuse reads as FF
 #define ADMIN_DDR           DDRA
 #define ADMIN_PIN           PINA
 #define TEENSY_DETECTED          0           // Anzeige, dass Teensy vorhanden. Active LO
+#define STROBE 4
+
 //#define TEENSY_LED          6
 
 // switch in

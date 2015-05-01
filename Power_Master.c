@@ -286,7 +286,8 @@ void device_init(void)
    ADMIN_PORT |= (1<< TEENSY_DETECTED); //HI
  //  ADMIN_DDR |= (1<< TEENSY_LED); // Ausgang fuer Anzeige Teensy present
  //  ADMIN_PORT &= ~(1<< TEENSY_LED); //LO
-  
+   ADMIN_DDR |= (1<< STROBE); // Ausgang fuer Strobe
+   ADMIN_PORT &= ~(1<< STROBE); // LO
    /*
    // TWI vorbereiten
 	TWI_DDR |= (1<<SDA_PIN);//Bit 4 von PORT C als Ausgang für SDA
@@ -330,7 +331,10 @@ void rotary_init(void)
    
    
    EICRA |= (1<<ISC01);
-   EIMSK |= (1<<INTF0);
+   EIMSK |= (1<<INT0);
+   
+   EICRA |= (1<<ISC11);
+   EIMSK |= (1<<INT1);
    
    // Rotary A
    ROTARY_DDR &= ~(1<<ROTARY_A_PIN0);  // Interrupt-Eingang INT0
@@ -466,7 +470,7 @@ ISR(INT0_vect)
 ISR(INT1_vect)
 {
    //rot_eingang0++;
-//   OSZI_A_LO;
+   OSZI_A_LO;
    uint8_t rot_pin1 = (ROTARY_PIN & (1<<ROTARY_B_PIN1)); // Sense Eingang A
    
    uint16_t delta=0x2F;
@@ -497,13 +501,13 @@ ISR(INT1_vect)
       }
       else
       {
-         soll_strom = ROTARY_A_MIN;
+         soll_strom = ROTARY_B_MIN;
       }
    }
    // soll_spannung an Teensy
 //   spi_txbuffer[2] =  (soll_strom & 0x00FF);
 //   spi_txbuffer[3] = ((soll_strom & 0xFF00)>>8);
-//   OSZI_A_HI;
+   OSZI_A_HI;
 }
 
 
@@ -561,7 +565,7 @@ ISR (TIMER0_OVF_vect)
    }
    
    SR_loopcount_L++;
-   if (SR_loopcount_L > 0xFA)
+   if (SR_loopcount_L > 0x0F)
    {
       SR_loopcount_L=0;
       SR_loopcount_H++;
@@ -954,7 +958,9 @@ int main (void)
             
             // !!! Anschluesse von PORTC vertauscht !!!
 #pragma mark SWITCH
-            switch_in = 7-((SWITCH_PIN & 0x07) );
+            //switch_in = 7-((SWITCH_PIN & 0x07) );
+            
+            
             lcd_gotoxy(0,0);
             //lcd_puthex(SWITCH_PIN& 0x07);
             lcd_puthex(switch_in);
@@ -972,58 +978,60 @@ int main (void)
             // 3: 1A
             
             
-            switch_out |= 0x0E; // reset der Schalterwerte, alle LO (PNP): Messung ueberbruecken
+            switch_out = 0x1C; // reset der Schalterwerte, alle LO (PNP): Messung ueberbruecken
             strom_mult = 1;
             switch (switch_in)
             {
                case 0x00: // OFF
                {
-                  
+                 
                }break;
                   
                case 0x01: //50mA
                {
-                  switch_out |= (1<<2);
-                  strom_mult = 2;
+                  switch_out |= (1<<7);
+   //               strom_mult = 2;
                   strom_kanal = 1;
                   
                }break;
                case 0x02: // 100mA
                {
-                  switch_out |= (1<<2);
+                  switch_out |= (1<<7);
                   strom_kanal = 1;
                }break;
                case 0x03: // 500mA
                {
-                  switch_out |= (1<<3);
-                  strom_mult = 2;
+                  switch_out |= (1<<6);
+    //              strom_mult = 2;
                   strom_kanal = 0;
                }break;
                case 0x04: // 1A
                {
-                  switch_out |= (1<<3);
+                  switch_out |= (1<<6);
                   strom_kanal = 0;
                }break;
                case 0x05: // 5A
                {
-                  switch_out |= (1<<1);
+                  switch_out |= (1<<5);
                   strom_kanal = 2;
-                  strom_mult = 2;
+       //           strom_mult = 2;
                }break;
                case 0x06: // 10A
                {
-                  switch_out |= (1<<1);
+                  switch_out |= (1<<5);
                   strom_kanal = 2;
                }break;
                default:
                {
-                  strom_mult = 0;
+                  strom_mult = 1;
                }
                   
             }// switch
             //OSZI_B_HI;
             
+            lcd_putc(' ');
             lcd_puthex(switch_out);
+            lcd_putc(' ');
             lcd_puthex(strom_mult);
    //         OSZI_A_LO;
    //         set_SR(switch_out); //
@@ -1032,9 +1040,9 @@ int main (void)
             //spi_adc_restore();
 #pragma mark ADC
              
-//            OSZI_A_LO;
-            //_delay_us(1);
- //           OSZI_A_HI;
+         //   OSZI_A_LO;
+         //   _delay_us(10);
+         //   OSZI_A_HI;
             //_delay_us(1);
             
             //OSZI_B_LO;
@@ -1042,27 +1050,39 @@ int main (void)
      //      setDAC7612(soll_spannung); // hier ODER in Control_loop
             
             
+            
             // Spannung messen
             //OSZI_B_HI;
-            ist_spannung= MCP3208_spiRead(SingleEnd,3);
-            OCR1B = ist_spannung;                      // Dutycycle of OC1B // ergibt bei 3 volle Aussteuerung
-             //_delay_us(1);
+            ist_spannung= MCP3208_spiRead(SingleEnd,2);
+            OCR1B = ist_spannung;
+   
+            spannungschleifecounter &= 0x0F;
+            spannung_mittel[spannungschleifecounter] = ist_spannung;
+            spannungschleifecounter++;
+
+            
+            
+            //OCR1B = soll_spannung; // Dutycycle of OC1B // ergibt bei 3 volle Aussteuerung
+            
+            //_delay_us(1);
             
             // Strom messen
             if (switch_in) // Ein Bereich gewaehlt
             {
-               uint16_t akt_strom = MCP3208_spiRead(SingleEnd,(strom_kanal)) ;
-               
+               strom_kanal = 1;
                stromschleifecounter &= 0x03;
+               uint16_t akt_strom = MCP3208_spiRead(SingleEnd,(strom_kanal)) ;
+               strom_mittel[stromschleifecounter] = akt_strom;
+               
                //strom_mittel[stromschleifecounter] = (MCP3208_spiRead(SingleEnd,strom_kanal)) ;
                if ((strom_mult == 2) && akt_strom < 0x800)
                {
                   akt_strom *= strom_mult;
-                  strom_mittel[stromschleifecounter] = akt_strom;
+                  
                }
                else // Bereichsuerberschreitung
                {
-                  switch_out ^= 0x80; // bit 7 toggeln,
+                  //switch_out ^= 0x80; // bit 7 toggeln,
                }
                stromschleifecounter++;
                
@@ -1077,11 +1097,14 @@ int main (void)
                mittelstrom /= 4;
                //         ist_strom =  MCP3208_spiRead(SingleEnd,(switch_out & 0x07)) ;
                
-               lcd_gotoxy(12,2);
-                lcd_putc('i');
+               lcd_gotoxy(0,3);
+               lcd_putc('i');
+               //lcd_putint12(akt_strom);
+               //lcd_putc(' ');
                lcd_putint12( mittelstrom);
-               
-               OCR1A = 0x0FFF - mittelstrom;                       // Null strom ergibt 0xFF vom ADC -> Dutycycle of OC1A
+               //OCR1A = mittelstrom;
+               OCR1A = akt_strom;
+               //OCR1A = 0x0FFF - mittelstrom;   // Null strom ergibt 0xFF vom ADC -> Dutycycle of OC1A
             }
             /*
              lcd_gotoxy(6,0);
@@ -1090,7 +1113,7 @@ int main (void)
             
             if (TEST == 1)
             {
-            lcd_gotoxy(6,0);
+            lcd_gotoxy(7,0);
             lcd_putc('i');
             lcd_putint12(ist_spannung);
             lcd_putc(' ');
@@ -1170,7 +1193,7 @@ int main (void)
 #pragma mark control_loop
          //   OSZI_B_LO;
             
-            control_loop(); //2.5us
+ //           control_loop(); //2.5us
             
           //  OSZI_B_HI;
             //lcd_puthex(currentcontrol);
@@ -1183,22 +1206,25 @@ int main (void)
       {
          seg_loop++;
          updateOK &= ~(1<<UPDATE_7SEG_SR);
-         OSZI_A_LO;
-         set_SR_23S17_A(pattern[(seg_loop & 0x1F)]);
          
-         set_SR_23S17_B(seg_loop);
+ //        set_SR_23S17_A(pattern[(seg_loop & 0x1F)]);
+         
+     //    set_SR_23S17_B(seg_loop);
          
          
-         lcd_gotoxy(0,3);
-         lcd_putint12(seg_loop);
+         //lcd_gotoxy(0,2);
+         //lcd_putint12(seg_loop);
          ledcounter++;
          
+         //Drehschalter lesen (GPIOA bit 5-7)
+         uint8_t schaltpos = get_SR_23S17(GPIOA);
          
-         uint8_t a = get_SR_23S17(GPIOB);
-         lcd_gotoxy(6,3);
-         lcd_puthex(a & 0xF0);
-
-         
+         lcd_gotoxy(10,0);
+         lcd_puthex(schaltpos);
+         lcd_puthex((schaltpos & 0xE0)>>1);
+         // shift 5 bit
+         switch_in = 7-((schaltpos & 0xE0)>>5);
+         lcd_puthex(switch_in);
          uint8_t index=0;
          uint32_t mittelspannung = 0;
          for (index=0;index<16;index++)
@@ -1209,24 +1235,37 @@ int main (void)
          
          update_BCD_Array(BCD_Array,mittelspannung);
          
+         //uint8_t max = get_SR_23S17(GPIOB); // uMax, iMax
+         //lcd_puthex(max);
+         
+         // PORT B: Lesen vor schreiben!!!
+         
+         uint8_t inputB = get_SR_23S17(GPIOB);
+         
+         set_SR_23S17(GPIOB,switch_out);
+         //uint8_t inputB = io_SR_23S17(GPIOB,switch_out);
+         lcd_gotoxy(14,1);
+         lcd_puthex((inputB& 0x03));
          
          // DAC U
-         setDAC_U((seg_loop<<6));
+         OSZI_B_LO;
+         setMCP4821_U(soll_spannung);
+         
          _delay_ms(1);
          
-         setMCP4821_I(8*seg_loop);
-
+         setMCP4821_I(soll_strom);
+         lcd_gotoxy(0,2);
+         lcd_putint12(soll_spannung);
+         lcd_putc(' ');
+         lcd_putint12(ist_spannung);
          
-         /*
-          lcd_gotoxy(0,2);
-          lcd_putint1(BCD_Array[3]);
-          // lcd_putc(' ');
-          lcd_putint1(BCD_Array[2]);
-          // lcd_putc(' ');
-          lcd_putint1(BCD_Array[1]);
-          // lcd_putc(' ');
-          lcd_putint1(BCD_Array[0]);
-          */
+         lcd_gotoxy(0,1);
+         lcd_putc('i');
+         lcd_putint12(ist_strom);
+         lcd_putc(' ');
+         lcd_putc('s');
+         lcd_putint12(soll_strom);
+         lcd_putc(' ');
          
          
     //     seg_loop &= 0xFF;
@@ -1245,22 +1284,22 @@ int main (void)
          uint8_t seg_data = ((BCD_Array[(seg_loop & 0x07)] & 0x0F));
          //uint8_t seg_data = 3;//((BCD_Array[1] & 0x0F));
          
-         lcd_gotoxy(10,3);
-         lcd_putint12(BCD_Array[(seg_loop & 0x07)]);
-         lcd_putc(' ');
+         //lcd_gotoxy(10,3);
+         //lcd_putint12(BCD_Array[(seg_loop & 0x07)]);
+         //lcd_putc(' ');
          
          
-         lcd_puthex(seg_data);
+         //lcd_puthex(seg_data);
          
          seg_data |= (1<<((seg_loop & 0x07)+4));
          
          //   seg_data = 13;
          
          //set_SR_7Seg(BCD_Array[seg_loop & 0x03]);
-//        set_SR_7Seg(seg_data);
+        set_SR_7Seg(seg_data);
         
         
-         OSZI_A_HI;
+         OSZI_B_HI;
       }//if UPDATE_7SEG_SR
 
       
@@ -1290,6 +1329,7 @@ int main (void)
                lcd_putc(' ');
                lcd_putc('s');
                lcd_putint12(soll_strom);
+               
             }break;
 
          case 3:
@@ -1312,10 +1352,10 @@ int main (void)
                
             default:
             {
-               lcd_gotoxy(0,1);
-               lcd_putint12(soll_spannung);
-               lcd_putc(' ');
-               lcd_putint12(ist_spannung);
+              // lcd_gotoxy(0,2);
+             //  lcd_putint12(soll_spannung);
+             //  lcd_putc(' ');
+             //  lcd_putint12(ist_spannung);
             }break;
          } // switch
 

@@ -128,7 +128,8 @@ void spi_master_init (void)
    MCP_PORT |= (1<<MCP_DAC_I_CS); // HI,
 
    MCP_LOAD_DDR |= (1<<MCP_LOAD); // LOAD Data
-   MCP_LOAD_PORT |= (1<<MCP_LOAD); // HI
+   MCP_LOAD_PORT &= ~(1<<MCP_LOAD); // LO
+   //MCP_LOAD_PORT |= (1<<MCP_LOAD); // LO
    
 }
 
@@ -374,71 +375,29 @@ void init_SR_23S17(void)
    uint8_t init_opcode = 0x40; // 0x40 & write
    uint8_t init_adresseA = 0x00; // SPI_IODRA PIN-OUT/IN
    uint8_t init_adresseB = 0x01; // SPI_IODRB PIN-OUT/IN
-   uint8_t init_dataA = 0x00; // alle output
-   uint8_t init_dataB = 0xF0; // alle output
+   uint8_t init_dataA = 0xE0; // bit 0-4 output bit 5-7 input (Drehschalter)
+   uint8_t init_dataB = 0x03; // bit 0-1 input (Imax, Umax) bit 5-7 output (Relais)
    SRA_CS_LO;
    _delay_us(1);
    
-   SPI_Write(IODIRA,init_dataA);   // GPIOA As Output
-   /*
-   spiwaitcounter=0;
-   SPDR0 = init_opcode;
-   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
-   {
-      spiwaitcounter++;
-   }
-   SPDR0 = init_adresseA;
-   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
-   {
-      spiwaitcounter++;
-   }
-    
-   SPDR0 = init_dataA;
-   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
-   {
-      spiwaitcounter++;
-   }
-   _delay_us(1);
-   SRA_CS_HI;
-    */
-   _delay_us(1);
+   SPI_Write(IODIRA,init_dataA);   // GPIOA As Input/Output
+    _delay_us(1);
    SPI_Write(IODIRB,init_dataB);
    
-    /*
-   SRA_CS_LO;
-   _delay_us(1);
-   spiwaitcounter=0;
-   SPDR0 = init_opcode;
-   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
-   {
-      spiwaitcounter++;
-   }
-   SPDR0 = init_adresseB;
-   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
-   {
-      spiwaitcounter++;
-   }
-   
-   
-   
-  
-   SPDR0 = init_dataB;
-   while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
-   {
-      spiwaitcounter++;
-   }
-   _delay_us(1);
-   SRA_CS_HI;
-    */
-   _delay_us(1);
+    _delay_us(1);
    
    SPI_Write(IOCONA,0x28);   // I/O Control Register: BANK=0, SEQOP=1, HAEN=1 (Enable Addressing)
    //SPI_Write(IODIRA,0x00);   // GPIOA As Output
    //SPI_Write(IODIRB,0x00);   // GPIOB As Input
-   SPI_Write(GPPUB,0xF0);    // Enable Pull-up Resistor on GPIOB
-   SPI_Write(GPIOA,0x00);    // Reset Output on GPIOA
+   //SPI_Write(GPPUB,0x00);    // Enable Pull-up Resistor on GPIOB
+   SPI_Write(GPIOB,0x03);    // Reset Output on GPIOB
    
 
+  // SPI_Write(GPPUA,0xF0);    // Enable Pull-up Resistor on GPIOA
+   
+   SPI_Write(GPPUB,0x03);    // Enable Pull-up Resistor on GPIOB
+   
+   SRA_CS_HI;
    
 }
 
@@ -505,7 +464,7 @@ uint8_t set_SR_23S17_B(uint8_t outData)
    
 }
 
-uint8_t set_SR_23S17(uint8_t addr, uint8_t outData)
+uint8_t set_SR_23S17(uint8_t addr,uint8_t outData)
 {
    uint8_t write_opcode = 0x40; // 0x40 & write
    uint8_t write_adresse = 0x13; // GPIOB PIN-OUT/IN
@@ -565,15 +524,52 @@ uint8_t get_SR_23S17(uint8_t addr)
    
    // CS pin is not active
    SRA_CS_HI;
+  
+   return(SPDR0);
+}
+
+uint8_t io_SR_23S17(uint8_t addr, uint8_t data)
+{
+   uint8_t read_opcode = 0x41; // 0x40 & read
+   uint8_t read_adresse = 0x13; // GPIOB PIN-OUT/IN
+   
+   // Activate the CS pin
+   SRA_CS_LO;
+   // Start MCP23S17 OpCode transmission
+   //SPDR = SPI_SLAVE_ID | ((SPI_SLAVE_ADDR << 1) & 0x0E)| SPI_SLAVE_READ;
+   _delay_us(1);
+   spiwaitcounter=0;
+   SPDR0 = read_opcode;
+   
+   // Wait for transmission complete
+   while(!(SPSR0 & (1<<SPIF0)));
+   _delay_us(1);
+   // Start MCP23S17 Address transmission
+   SPDR0 = addr;
+   // Wait for transmission complete
+   while(!(SPSR0 & (1<<SPIF0)));
+   
+   _delay_us(1);
+   // Send Dummy transmission for reading the data
+   SPDR0 = data;
+   // Wait for transmission complete
+   while(!(SPSR0 & (1<<SPIF0)));
+   
+   // CS pin is not active
+   SRA_CS_HI;
    return(SPDR0);
 }
 
 
-void setDAC_U(uint16_t data)
+
+void setMCP4821_U(uint16_t data)
 {
+   //OSZI_A_LO;
+   
    MCP_U_CS_LO;
    //MCP_PORT &= ~(1<<MCP_DAC_U_CS);
    _delay_us(1);
+   //OSZI_A_HI;
    uint8_t hbyte = (((data & 0xFF00)>>8) & 0x0F); // bit 8-11 von data als bit 0-3
    
    hbyte |= 0x30; // Gain 1
@@ -598,9 +594,9 @@ void setDAC_U(uint16_t data)
    _delay_us(1);
    
    // Daten laden
-   MCP_LOAD_LO;
+   //MCP_LOAD_LO;
    _delay_us(1);
-   MCP_LOAD_HI;
+   //MCP_LOAD_HI;
    
    
 }
@@ -634,9 +630,9 @@ void setMCP4821_I(uint16_t data)
    _delay_us(1);
    
    // Daten laden
-   MCP_LOAD_LO;
-   _delay_us(1);
-   MCP_LOAD_HI;
+   //MCP_LOAD_LO;
+  // _delay_us(1);
+   //MCP_LOAD_HI;
    
    
 }

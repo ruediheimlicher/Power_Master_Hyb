@@ -64,9 +64,13 @@
 #define MCP_I_CS_LO        MCP_PORT &= ~(1<<MCP_DAC_I_CS)
 
 
-#define MCP_LOAD_PORT PORTA
-#define MCP_LOAD_DDR  DDRA
-#define MCP_LOAD  4
+//#define MCP_LOAD_PORT PORTA
+//#define MCP_LOAD_DDR  DDRA
+//#define MCP_LOAD  4
+
+#define MCP_LOAD_PORT PORTC
+#define MCP_LOAD_DDR  DDRC
+#define MCP_LOAD  5
 
 #define MCP_LOAD_HI        MCP_LOAD_PORT |= (1<<MCP_LOAD)
 #define MCP_LOAD_LO        MCP_LOAD_PORT &= ~(1<<MCP_LOAD)
