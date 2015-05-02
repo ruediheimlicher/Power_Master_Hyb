@@ -74,6 +74,9 @@ avrdude: safemode: efuse reads as FF
 
 #define SPI_RUN_BIT            7   // MASTER soll SPI abfragen
 
+
+
+
 // OSZI
 #define OSZIPORT           PORTA
 #define OSZIPORTDDR        DDRA

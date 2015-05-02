@@ -121,6 +121,12 @@ volatile uint16_t soll_strom=0;
 volatile uint16_t ext_spannung=0;
 volatile uint16_t ext_strom=0;
 
+#define CORR_01   80
+#define CORR_1   44
+#define CORR_10  40
+
+volatile uint16_t strom_corr[3] = {CORR_01,CORR_1,CORR_10};
+
 
 // SPI
 volatile char incoming=0;
@@ -189,6 +195,30 @@ void delay_ms(unsigned int ms)
 		_delay_ms(0.96);
 		ms--;
 	}
+}
+
+void calibrate(void)
+{
+   uint8_t pos=0;
+   for (pos=7;pos>4;pos--)
+   {
+      uint8_t temp_out=0x1C;
+      switch_out |= (1<<pos);
+      set_SR_23S17(GPIOB,temp_out);
+      _delay_ms(1000);
+      uint8_t i=0;
+      uint16_t temp_strom = 0 ;
+      for (i=0;i<4;i++)
+      {
+         temp_strom += MCP3208_spiRead(SingleEnd,1) ;
+         _delay_us(2);
+      }
+      temp_strom /= 4;
+      strom_corr[pos-5] = temp_strom;
+      _delay_ms(500);
+   }
+   
+   
 }
 
 
@@ -840,7 +870,16 @@ int main (void)
       0b00000000,
    };
 
-   
+
+ //calibrate();
+  /*
+   lcd_gotoxy(10,2);
+   for (i=0;i<3;i++)
+   {
+      lcd_putint(strom_corr[i]);
+      lcd_putc(' ');
+   }
+ */
 
    
 #pragma mark while
@@ -976,10 +1015,11 @@ int main (void)
             // 1: 10A
             // 2: 100mA
             // 3: 1A
+#pragma mark switch_out
             
-            
-            switch_out = 0x1C; // reset der Schalterwerte, alle LO (PNP): Messung ueberbruecken
+            switch_out = 0x1C; // reset der Schalterwerte, alle LO (NPN fuer Relais)
             strom_mult = 1;
+            uint16_t cal  = 0;
             switch (switch_in)
             {
                case 0x00: // OFF
@@ -989,6 +1029,7 @@ int main (void)
                   
                case 0x01: //50mA
                {
+                  cal = strom_corr[0];
                   switch_out |= (1<<7);
    //               strom_mult = 2;
                   strom_kanal = 1;
@@ -996,28 +1037,33 @@ int main (void)
                }break;
                case 0x02: // 100mA
                {
+                  cal = strom_corr[0];
                   switch_out |= (1<<7);
                   strom_kanal = 1;
                }break;
                case 0x03: // 500mA
                {
+                  cal = strom_corr[1];
                   switch_out |= (1<<6);
     //              strom_mult = 2;
                   strom_kanal = 0;
                }break;
                case 0x04: // 1A
                {
+                  cal = strom_corr[1];
                   switch_out |= (1<<6);
                   strom_kanal = 0;
                }break;
                case 0x05: // 5A
                {
+                  cal = strom_corr[2];
                   switch_out |= (1<<5);
                   strom_kanal = 2;
        //           strom_mult = 2;
                }break;
                case 0x06: // 10A
                {
+                  cal = strom_corr[2];
                   switch_out |= (1<<5);
                   strom_kanal = 2;
                }break;
@@ -1072,6 +1118,7 @@ int main (void)
                strom_kanal = 1;
                stromschleifecounter &= 0x03;
                uint16_t akt_strom = MCP3208_spiRead(SingleEnd,(strom_kanal)) ;
+               
                strom_mittel[stromschleifecounter] = akt_strom;
                
                //strom_mittel[stromschleifecounter] = (MCP3208_spiRead(SingleEnd,strom_kanal)) ;
@@ -1099,12 +1146,29 @@ int main (void)
                
                lcd_gotoxy(0,3);
                lcd_putc('i');
-               //lcd_putint12(akt_strom);
-               //lcd_putc(' ');
+               lcd_putint12(mittelstrom);
+               lcd_putc('c');
+               lcd_putint(cal);
+               
+               if (mittelstrom > cal)
+               {
+               mittelstrom -= cal;
+               }
+               else
+               {
+                  mittelstrom   = 0;
+               }
+               
+               lcd_putc(' ');
                lcd_putint12( mittelstrom);
-               //OCR1A = mittelstrom;
-               OCR1A = akt_strom;
+               
+               OCR1A = mittelstrom;
+               //OCR1A = akt_strom;
                //OCR1A = 0x0FFF - mittelstrom;   // Null strom ergibt 0xFF vom ADC -> Dutycycle of OC1A
+            }
+            else
+            {
+               OCR1A = 0;
             }
             /*
              lcd_gotoxy(6,0);
@@ -1243,6 +1307,8 @@ int main (void)
          uint8_t inputB = get_SR_23S17(GPIOB);
          
          set_SR_23S17(GPIOB,switch_out);
+         
+         
          //uint8_t inputB = io_SR_23S17(GPIOB,switch_out);
          lcd_gotoxy(14,1);
          lcd_puthex((inputB& 0x03));
