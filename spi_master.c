@@ -572,8 +572,8 @@ void setMCP4821_U(uint16_t data)
    //OSZI_A_HI;
    uint8_t hbyte = (((data & 0xFF00)>>8) & 0x0F); // bit 8-11 von data als bit 0-3
    
-   hbyte |= 0x30; // Gain 1
-   //hbyte |= 0x10; // Gain 2
+   //hbyte |= 0x30; // Gain 1
+   hbyte |= 0x10; // Gain 2
    //hbyte = 0b00010000;
    SPDR0 = (hbyte);
    while(!(SPSR0 & (1<<SPIF0)) )//&& spiwaitcounter < WHILEMAX)
