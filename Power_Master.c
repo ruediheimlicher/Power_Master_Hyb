@@ -1153,7 +1153,7 @@ int main (void)
                   //mittelstrom = 0x0C00;
                }
                
-               //if (mittelstrom < 180)
+               if (mittelstrom < 0x0FFF)
                {
                   OCR1A = mittelstrom/4;
                }
