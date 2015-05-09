@@ -1071,13 +1071,15 @@ int main (void)
    //         set_SR(switch_out); //
    //         OSZI_A_HI;
 
-#pragma mark ADC
+#pragma mark ADC_U
             
             // Spannung messen
             //OSZI_B_HI;
             ist_spannung= MCP3208_spiRead(SingleEnd,2);
-            OCR1B = ist_spannung;
-   
+            if (ist_spannung < 0x0FFF)
+            {
+               OCR1B = ist_spannung;
+            }
             
             spannungschleifecounter &= 0x0F;
             spannung_mittel[spannungschleifecounter] = ist_spannung;
