@@ -1071,7 +1071,7 @@ int main (void)
    //         set_SR(switch_out); //
    //         OSZI_A_HI;
 
-#pragma mark ADC
+#pragma mark ADC_U
             
             // Spannung messen
             //OSZI_B_HI;
@@ -1087,7 +1087,7 @@ int main (void)
             //OCR1B = soll_spannung; // Dutycycle of OC1B // ergibt bei 3 volle Aussteuerung
             
             //_delay_us(1);
-            
+#pragma mark ADC_I
             // Strom messen
             if (switch_in) // Ein Bereich gewaehlt
             {
@@ -1102,7 +1102,7 @@ int main (void)
                {
                   // http://embeddedgurus.com/stack-overflow/tag/division/
                   //akt_strom = (((uint32_t)(akt_strom*10) * (uint32_t)0xAAAB) >> 16) >> 1; // *3.33
-
+                  
                   //akt_strom *= strom_mult;
                   
                }
@@ -1115,7 +1115,7 @@ int main (void)
                stromschleifecounter++;
                
                
-
+               
                uint8_t index=0;
                uint32_t mittelstrom = 0;
                for (index=0;index<4;index++)
@@ -1135,7 +1135,7 @@ int main (void)
                
                if (mittelstrom > cal)
                {
-               mittelstrom -= cal;
+                  mittelstrom -= cal;
                }
                else
                {
