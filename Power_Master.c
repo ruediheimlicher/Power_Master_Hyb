@@ -1078,6 +1078,7 @@ int main (void)
             ist_spannung= MCP3208_spiRead(SingleEnd,2);
             OCR1B = ist_spannung;
    
+            
             spannungschleifecounter &= 0x0F;
             spannung_mittel[spannungschleifecounter] = ist_spannung;
             spannungschleifecounter++;
