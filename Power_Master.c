@@ -123,9 +123,9 @@ volatile uint16_t soll_strom=0;
 volatile uint16_t ext_spannung=0;
 volatile uint16_t ext_strom=0;
 
-#define CORR_01   111
-#define CORR_1   62
-#define CORR_10  52
+#define CORR_01   115
+#define CORR_1   66
+#define CORR_10  54
 
 volatile uint16_t strom_corr[3] = {CORR_01,CORR_1,CORR_10};
 
@@ -1062,11 +1062,11 @@ int main (void)
                   
             }// switch
             //OSZI_B_HI;
-            lcd_gotoxy(0,3);
+            //lcd_gotoxy(0,3);
             //lcd_putc(' ');
-            lcd_puthex(switch_out);
-            lcd_putc(' ');
-            lcd_puthex(strom_mult);
+            //lcd_puthex(switch_out);
+            //lcd_putc(' ');
+            //lcd_puthex(strom_mult);
    //         OSZI_A_LO;
    //         set_SR(switch_out); //
    //         OSZI_A_HI;
@@ -1127,7 +1127,7 @@ int main (void)
                
                //         ist_strom =  MCP3208_spiRead(SingleEnd,(switch_out & 0x07)) ;
                
-               //lcd_gotoxy(0,3);
+               //lcd_gotoxy(0,2);
                //lcd_putc('i');
                //lcd_putint12(mittelstrom);
                //lcd_putc('c');
@@ -1153,9 +1153,9 @@ int main (void)
                   //mittelstrom = 0x0C00;
                }
                
-               if (mittelstrom < 0x0FFF)
+               //if (mittelstrom < 0x0FFF)
                {
-                  OCR1A = mittelstrom/4;
+                  OCR1A = mittelstrom;
                }
                //else
                {
