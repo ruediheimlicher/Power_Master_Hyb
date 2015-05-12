@@ -40,6 +40,8 @@ uint16_t loopCount0=0;
 uint16_t loopCount1=0;
 uint16_t loopCount2=0;
 
+uint16_t buzzercount=0;
+
 
 #define EXT_ADRESSE				0x62
 #define TWI_ERR_BIT				7
@@ -123,9 +125,9 @@ volatile uint16_t soll_strom=0;
 volatile uint16_t ext_spannung=0;
 volatile uint16_t ext_strom=0;
 
-#define CORR_01   115
-#define CORR_1   66
-#define CORR_10  54
+#define CORR_01   101
+#define CORR_1   62
+#define CORR_10  48
 
 volatile uint16_t strom_corr[3] = {CORR_01,CORR_1,CORR_10};
 
@@ -462,12 +464,12 @@ ISR(INT0_vect)
 //   OSZI_A_LO;
    uint8_t rot_pin1 = (ROTARY_PIN & (1<<ROTARY_A_PIN1)); // Sense Eingang A
    
-   uint16_t delta=0x2F;
+   uint16_t delta=0x64;
    
    rot_control++;
    if (rot_loopcountA_H  > 0x08)
    {
-      delta=0x02;
+      delta=0x14;
    }
    rot_loopcountA_H=0;
    
@@ -502,15 +504,15 @@ ISR(INT0_vect)
 ISR(INT1_vect)
 {
    //rot_eingang1++;
-   OSZI_A_LO;
+   //OSZI_A_LO;
    uint8_t rot_pin1 = (ROTARY_PIN & (1<<ROTARY_B_PIN1)); // Sense Eingang A
    
-   uint16_t delta=0x2F;
+   uint16_t delta=0xC8;
    
    rot_control++;
    if (rot_loopcountB_H  > 0x08)
    {
-      delta=0x02;
+      delta=0x32;
    }
    rot_loopcountB_H=0;
    
@@ -539,7 +541,7 @@ ISR(INT1_vect)
    // soll_spannung an Teensy
 //   spi_txbuffer[2] =  (soll_strom & 0x00FF);
 //   spi_txbuffer[3] = ((soll_strom & 0xFF00)>>8);
-   OSZI_A_HI;
+   //OSZI_A_HI;
 }
 
 
@@ -823,7 +825,7 @@ int main (void)
    currentcontrol=1; // 0=voltage control, 1 current control
    //lcd_gotoxy(6,0);
    //lcd_putsignedint(-12);
-   soll_strom = 2000;
+   soll_strom = 0x0FA0;
    
    
    
@@ -1133,9 +1135,10 @@ int main (void)
                //lcd_putc('c');
                //lcd_putint(cal);
                
+               //cal=0;
                if (mittelstrom > cal)
                {
-                  mittelstrom -= cal;
+                 mittelstrom -= cal;
                }
                else
                {
@@ -1387,8 +1390,15 @@ int main (void)
 			loopCount0 =0;
          //OSZI_B_HI;
 		}
+      
+      buzzercount++;
+      if (buzzercount > 0x000f)
+      {
+         buzzercount=0;
+         OSZI_A_TOGG;
+      }
 
-#pragma mark Tastatur 
+#pragma mark Tastatur
 		/* ******************** */
       if (TASTATUR_ON)
       {
