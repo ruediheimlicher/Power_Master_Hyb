@@ -125,12 +125,23 @@ volatile uint16_t soll_strom=0;
 volatile uint16_t ext_spannung=0;
 volatile uint16_t ext_strom=0;
 
-#define CORR_01   101
-#define CORR_1   62
-#define CORR_10  48
+#pragma mark strom-def
 
-volatile uint16_t strom_corr[3] = {CORR_01,CORR_1,CORR_10};
+#define MIN_01   98
+#define MIN_1   58
+#define MIN_10  48
 
+volatile uint16_t strom_min[3] = {MIN_01,MIN_1,MIN_10};
+
+#define MAX_01   2588
+#define MAX_1   2880
+#define MAX_10  2800
+
+volatile uint16_t strom_max[3] = {MAX_01,MAX_1,MAX_10};
+
+#define IMAX   0x0FFF
+#define UMAX   0x0FFF
+#define HEXFAKTOR 0xFFFF
 
 // SPI
 volatile char incoming=0;
@@ -188,6 +199,11 @@ static int16_t set_val[2];
 
 uint8_t BCD_Array[4]={};
 
+
+// Integer-Berechnungen
+uint16_t hexfaktor = 0x0FFF;
+
+
 void delay_ms(unsigned int ms)
 /* delay for a minimum of <ms> */
 {
@@ -218,7 +234,7 @@ void calibrate(void)
          _delay_us(2);
       }
       temp_strom /= 4;
-      strom_corr[pos-5] = temp_strom;
+      strom_min[pos-5] = temp_strom;
       _delay_ms(500);
    }
    
@@ -881,7 +897,7 @@ int main (void)
    lcd_gotoxy(10,2);
    for (i=0;i<3;i++)
    {
-      lcd_putint(strom_corr[i]);
+      lcd_putint(strom_offsetU[i]);
       lcd_putc(' ');
    }
  */
@@ -1015,7 +1031,8 @@ int main (void)
             
             switch_out = 0x1C; // reset der Schalterwerte, alle LO (NPN fuer Relais)
             strom_mult = 1;
-            uint16_t cal  = 0;
+            uint16_t min  = 0;
+            uint16_t max  = 0;
             switch (switch_in)
             {
                case 0x00: // OFF
@@ -1025,36 +1042,42 @@ int main (void)
                   
                case 0x01: //50mA
                {
-                  cal = strom_corr[0];
+                  min = strom_min[0];
+                  max = strom_max[0];
                   switch_out |= (1<<7);
                   strom_mult = 2;
                   
                }break;
                case 0x02: // 100mA
                {
-                  cal = strom_corr[0];
+                  min = strom_min[0];
+                  max = strom_max[0];
                   switch_out |= (1<<7);
                }break;
                case 0x03: // 500mA
                {
-                  cal = strom_corr[1];
+                  min = strom_min[1];
+                  max = strom_max[1];
                   switch_out |= (1<<6);
                   strom_mult = 2;
                }break;
                case 0x04: // 1A
                {
-                  cal = strom_corr[1];
+                  min = strom_min[1];
+                  max = strom_max[1];
                   switch_out |= (1<<6);
                }break;
                case 0x05: // 5A
                {
-                  cal = strom_corr[2];
+                  min = strom_min[2];
+                  max = strom_max[2];
                   switch_out |= (1<<5);
                   strom_mult = 2;
                }break;
                case 0x06: // 10A
                {
-                  cal = strom_corr[2];
+                  min = strom_min[2];
+                  max = strom_max[2];
                   switch_out |= (1<<5);
                }break;
                default:
@@ -1136,15 +1159,68 @@ int main (void)
                //lcd_putint(cal);
                
                //cal=0;
-               if (mittelstrom > cal)
+               /*
+               uint32_t hexanzeigewert=0;
+              // volatile uint16_t offsetO = UMAX - max + min;    // Aus Messung bei Imax
+               uint32_t hexoffsetO = ((UMAX - max + min)) * HEXFAKTOR ;          // zu verteilen über Imax
+               uint32_t hexcorr=0;
+               if (mittelstrom > min) // keine negativen Werte
                {
-                 mittelstrom -= cal;
+                  hexanzeigewert = ((mittelstrom - min))* HEXFAKTOR; // Null-basierter Messwert * HEXFAKTOR
+               
+                  hexcorr = (hexoffsetO) * (mittelstrom - min)/(max - min); // Anteil corr bei akt_strom
+               
                }
                else
                {
-                  mittelstrom   = 0;
+                  
                }
-               if ((strom_mult == 2) )//&& akt_strom < 0x800)
+               uint16_t instrumentwert = ((hexanzeigewert + hexcorr)/HEXFAKTOR);// & 0xFFFF;
+                */
+               uint32_t hexanzeigewert=0;
+               uint16_t instrumentwert=0;
+
+               lcd_gotoxy(0,2);
+               lcd_putc('m');
+
+               if (mittelstrom > min) // keine negativen Werte
+               {
+                  //lcd_putc(' ');
+                  //lcd_putint12(mittelstrom-min);
+
+                 // lcd_putc('m');
+                  hexanzeigewert = (mittelstrom-min) * 0xFFF ;//* UMAX /(max-min) ;
+                  hexanzeigewert /= (max-min);
+                  hexanzeigewert *= UMAX;
+                  
+                  instrumentwert = hexanzeigewert/0xFFF;
+               }
+               
+               
+               
+               /*
+               lcd_gotoxy(0,1);
+               lcd_putc('1');
+               lcd_putint12(min);
+               lcd_putc(' ');
+               lcd_putc('2');
+               lcd_putint12(max);
+                */
+              // lcd_putc(' ');
+               lcd_putint12(mittelstrom);
+               //lcd_putc(' ');
+               //lcd_putint16(hexcorr>>8);
+              // lcd_putc('o');
+              // lcd_putint12(offsetO);
+             //  lcd_putc(' ');
+              // lcd_putc('a');
+               //lcd_putint16(hexanzeigewert>>8);
+               lcd_putc(' ');
+              //  lcd_gotoxy(0,3);
+               lcd_putc('i');
+               lcd_putint12(instrumentwert);
+               
+                if ((strom_mult == 2) )//&& akt_strom < 0x800)
                {
                   //mittelstrom *= 3.33;
                }
@@ -1158,7 +1234,8 @@ int main (void)
                
                //if (mittelstrom < 0x0FFF)
                {
-                  OCR1A = mittelstrom;
+                  //OCR1A = mittelstrom;
+                  OCR1A = instrumentwert;
                }
                //else
                {

@@ -9,7 +9,7 @@ avrdude: safemode: lfuse reads as c2
 avrdude: safemode: hfuse reads as D9
 avrdude: safemode: efuse reads as FF
 */
-#define TEST 0
+#define TEST 1
 
 #define OHNE_TEENSY 1
 
