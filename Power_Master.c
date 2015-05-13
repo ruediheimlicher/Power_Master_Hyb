@@ -160,6 +160,7 @@ volatile uint8_t teensycode = 0;
 
 // Schalter
 volatile uint8_t switch_in = 0;
+volatile uint8_t old_switch_in = 0;
 volatile uint8_t switch_out = 0;
 volatile uint8_t strom_mult = 1;
 volatile uint8_t strom_kanal = 0;
@@ -334,7 +335,12 @@ void device_init(void)
    
    ADMIN_DDR &= ~(1<< TEENSY_DETECTED); // Eingang fuer Anmeldung Teensy
    ADMIN_PORT |= (1<< TEENSY_DETECTED); //HI
- //  ADMIN_DDR |= (1<< TEENSY_LED); // Ausgang fuer Anzeige Teensy present
+
+   ADMIN_DDR &= ~(1<< THERMO); // Eingang fuer Thermometer
+   ADMIN_PORT |= (1<< THERMO); //HI
+
+   
+   //  ADMIN_DDR |= (1<< TEENSY_LED); // Ausgang fuer Anzeige Teensy present
  //  ADMIN_PORT &= ~(1<< TEENSY_LED); //LO
    ADMIN_DDR |= (1<< STROBE); // Ausgang fuer Strobe
    ADMIN_PORT &= ~(1<< STROBE); // LO
@@ -902,6 +908,11 @@ int main (void)
    }
  */
 
+   initADC();
+   
+   uint16_t min  = 0;
+   uint16_t max  = 0;
+
    
 #pragma mark while
 	while (1)
@@ -1029,10 +1040,15 @@ int main (void)
             // 3: 1A
 #pragma mark switch_out
             
+            if (old_switch_in == switch_in)
+            {
+            
+            }
+            else
+            {
             switch_out = 0x1C; // reset der Schalterwerte, alle LO (NPN fuer Relais)
             strom_mult = 1;
-            uint16_t min  = 0;
-            uint16_t max  = 0;
+            
             switch (switch_in)
             {
                case 0x00: // OFF
@@ -1086,6 +1102,9 @@ int main (void)
                }
                   
             }// switch
+               
+               old_switch_in = switch_in;
+            } // if old
             //OSZI_B_HI;
             //lcd_gotoxy(0,3);
             //lcd_putc(' ');
@@ -1149,6 +1168,7 @@ int main (void)
                }
                mittelstrom /= 4;
                
+ 
                
                //         ist_strom =  MCP3208_spiRead(SingleEnd,(switch_out & 0x07)) ;
                
@@ -1158,42 +1178,36 @@ int main (void)
                //lcd_putc('c');
                //lcd_putint(cal);
                
-               //cal=0;
-               /*
-               uint32_t hexanzeigewert=0;
-              // volatile uint16_t offsetO = UMAX - max + min;    // Aus Messung bei Imax
-               uint32_t hexoffsetO = ((UMAX - max + min)) * HEXFAKTOR ;          // zu verteilen über Imax
-               uint32_t hexcorr=0;
-               if (mittelstrom > min) // keine negativen Werte
-               {
-                  hexanzeigewert = ((mittelstrom - min))* HEXFAKTOR; // Null-basierter Messwert * HEXFAKTOR
-               
-                  hexcorr = (hexoffsetO) * (mittelstrom - min)/(max - min); // Anteil corr bei akt_strom
-               
-               }
-               else
-               {
-                  
-               }
-               uint16_t instrumentwert = ((hexanzeigewert + hexcorr)/HEXFAKTOR);// & 0xFFFF;
-                */
                uint32_t hexanzeigewert=0;
                uint16_t instrumentwert=0;
 
                lcd_gotoxy(0,2);
                lcd_putc('m');
-
+               if (mittelstrom > max)
+               {
+                  mittelstrom = max;
+               }
                if (mittelstrom > min) // keine negativen Werte
                {
                   //lcd_putc(' ');
                   //lcd_putint12(mittelstrom-min);
 
                  // lcd_putc('m');
-                  hexanzeigewert = (mittelstrom-min) * 0xFFF ;//* UMAX /(max-min) ;
+                  uint32_t diffstrom = mittelstrom-min;
+                  if ((strom_mult == 2) )//&& akt_strom < 0x800)
+                  {
+                     // http://embeddedgurus.com/stack-overflow/tag/division/
+                     diffstrom = (((uint32_t)(diffstrom*10) * (uint32_t)0xAAAB) >> 16) >> 1; // *3.33
+                  }
+                  
+
+                  //hexanzeigewert = (mittelstrom-min) * 0xFFF ;//* UMAX /(max-min) ;
+                  hexanzeigewert = (diffstrom) * 0xFFF ;//* UMAX /(max-min) ;
                   hexanzeigewert /= (max-min);
                   hexanzeigewert *= UMAX;
                   
                   instrumentwert = hexanzeigewert/0xFFF;
+                  
                }
                
                
@@ -1336,6 +1350,11 @@ int main (void)
       {
          updateOK &= ~(1<<UPDATE_DISP);
          
+         uint16_t temperatur = readKanal(THERMO);
+         lcd_gotoxy(10,3);
+         lcd_putint12(temperatur);
+         
+
          switch (TEST)
          {
          case 1: // nur Spannung
