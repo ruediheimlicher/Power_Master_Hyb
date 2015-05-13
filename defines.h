@@ -49,7 +49,10 @@ avrdude: safemode: efuse reads as FF
 #define ADMIN_PORT          PORTA
 #define ADMIN_DDR           DDRA
 #define ADMIN_PIN           PINA
-#define TEENSY_DETECTED          0           // Anzeige, dass Teensy vorhanden. Active LO
+#define TEENSY_DETECTED          0 // Anzeige, dass Teensy vorhanden. Active LO
+
+#define THERMO 3
+
 #define STROBE 4
 
 //#define TEENSY_LED          6
